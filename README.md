@@ -1,286 +1,288 @@
-# DSM-5 RAG 诊断标准知识问答系统
+# DSM-5 RAG Diagnostic Criteria Knowledge QA System
 
-基于混合检索（向量检索 + 关键词检索）的 DSM-5 诊断标准知识问答系统，支持中英文多语言查询。
+**English** | [简体中文](README.zh-CN.md)
 
-系统提供**两种服务入口**：
+A DSM-5 diagnostic criteria knowledge QA system built on hybrid retrieval (vector search + keyword search), supporting queries in both Chinese and English.
 
-- **FastAPI 微服务** (`dsm5-rag-api`) — 完整的 RESTful API，集成 DeepSeek LLM 生成专业回答
-- **FastMCP 服务** (`dsm5-rag-mcp`) — MCP 协议纯检索服务，剥离外部 LLM 依赖，适合 IDE 集成
+The system provides **two service entry points**:
 
-## 特性
+- **FastAPI microservice** (`dsm5-rag-api`) — full RESTful API with integrated DeepSeek LLM for professional answer generation
+- **FastMCP service** (`dsm5-rag-mcp`) — pure retrieval service over the MCP protocol, with no external LLM dependency, ideal for IDE integration
 
-- **混合检索** — 融合向量语义检索与关键词精确匹配，支持 `HYBRID` / `VECTOR_ONLY` / `KEYWORD_ONLY` / `FUSION` 四种模式
-- **多语言支持** — 使用 `paraphrase-multilingual-MiniLM-L12-v2` 多语言嵌入模型，支持中英文查询
-- **DeepSeek LLM** — 集成 DeepSeek API，基于检索结果生成专业回答（FastAPI 服务）
-- **纯检索 MCP** — FastMCP 服务剥离 LLM，仅暴露检索能力，适合 IDE 和工具链集成
-- **流式响应** — 支持流式输出，实时展示回答生成过程
-- **RESTful API** — 基于 FastAPI 构建，提供完整的 REST API 接口
-- **自动索引管理** — 系统启动时自动扫描文档、构建/加载索引，无需手动干预
-- **文档格式支持** — 支持 PDF、DOCX、TXT 格式文档解析
-- **ChromaDB 持久化** — 索引自动持久化，重启后无需重新构建
+## Features
 
-## 快速开始
+- **Hybrid Retrieval** — combines vector semantic search with exact keyword matching, supporting `HYBRID` / `VECTOR_ONLY` / `KEYWORD_ONLY` / `FUSION` modes
+- **Multilingual Support** — uses the `paraphrase-multilingual-MiniLM-L12-v2` multilingual embedding model, supporting both Chinese and English queries
+- **DeepSeek LLM** — integrates the DeepSeek API to generate professional answers from retrieved content (FastAPI service)
+- **Pure Retrieval MCP** — the FastMCP service strips out the LLM and exposes only retrieval capabilities, ideal for IDE and toolchain integration
+- **Streaming Responses** — supports streaming output with real-time answer generation
+- **RESTful API** — built on FastAPI with a complete REST API
+- **Automatic Index Management** — scans documents and builds/loads the index automatically on startup, no manual intervention required
+- **Document Format Support** — parses PDF, DOCX, and TXT documents
+- **ChromaDB Persistence** — the index is persisted automatically and survives restarts
 
-### 前置条件
+## Quick Start
+
+### Prerequisites
 
 - Python >= 3.10
-- [uv](https://docs.astral.sh/uv/) 包管理器（推荐）或 pip
+- [uv](https://docs.astral.sh/uv/) package manager (recommended) or pip
 
-### 安装
+### Installation
 
 ```bash
-# 克隆项目
+# Clone the repository
 git clone <your-repo-url> && cd myDSM5RAG
 
-# 使用 uv 安装（推荐）
+# Install with uv (recommended)
 uv sync --group dev
 
-# 或使用 pip
+# Or with pip
 pip install -e .
 ```
 
-### 配置
+### Configuration
 
-复制环境变量模板并编辑：
+Copy the environment template and edit it:
 
 ```bash
 cp .example.env .env
 ```
 
-在 `.env` 中配置 DeepSeek API 密钥（从 [platform.deepseek.com](https://platform.deepseek.com/) 获取）：
+Configure your DeepSeek API key in `.env` (get one from [platform.deepseek.com](https://platform.deepseek.com/)):
 
 ```env
 DEEPSEEK_API_KEY="sk-your-api-key-here"
 ```
 
-> **注意**：如不设置 API 密钥，FastAPI 服务将使用 MockLLM 模拟模式运行，MCP 服务不受影响（纯检索无需 LLM）。
+> **Note**: Without an API key, the FastAPI service runs in MockLLM simulation mode. The MCP service is unaffected (pure retrieval, no LLM needed).
 
-将 DSM-5 诊断标准文档（PDF/DOCX/TXT）放入 `dsm5_documents/` 目录。
+Place your DSM-5 diagnostic criteria documents (PDF/DOCX/TXT) into the `dsm5_documents/` directory.
 
-### 运行
+### Running
 
-#### FastAPI 服务（含 LLM 回答生成）
+#### FastAPI Service (with LLM answer generation)
 
 ```bash
-# 使用 uv
+# With uv
 uv run dsm5-rag-api
 
-# 或直接使用 uvicorn
+# Or directly with uvicorn
 uv run uvicorn dsm5_rag.api:app --host 127.0.0.1 --port 8031
 ```
 
-服务启动后访问：
-- API 文档（Swagger UI）：http://127.0.0.1:8031/docs
-- ReDoc：http://127.0.0.1:8031/redoc
+Once the service is running:
+- API docs (Swagger UI): http://127.0.0.1:8031/docs
+- ReDoc: http://127.0.0.1:8031/redoc
 
-#### MCP 服务（纯检索，无 LLM）
+#### MCP Service (pure retrieval, no LLM)
 
 ```bash
-# stdio 模式（IDE 集成，如 Claude Desktop、Cursor）
+# stdio mode (IDE integration, e.g. Claude Desktop, Cursor)
 uv run dsm5-rag-mcp
 
-# Streamable HTTP 模式（远程/生产）
+# Streamable HTTP mode (remote/production)
 uv run python -c "from dsm5_rag.mcp_server import main_http; main_http()"
 
-# 或使用 fastmcp dev 模式调试
+# Or debug with fastmcp dev mode
 uv run fastmcp dev src/dsm5_rag/mcp_server.py
 ```
 
-#### 运行示例
+#### Running Examples
 
 ```bash
-# 基本查询（使用 Python SDK）
+# Basic query (using the Python SDK)
 uv run python examples/basic_query.py
 
-# 批量查询 & 关键词搜索
+# Batch queries & keyword search
 uv run python examples/batch_query.py
 
-# HTTP API 客户端（需要先启动 API 服务）
+# HTTP API client (requires the API service to be running)
 uv run python examples/api_client.py
 ```
 
-## 配置项
+## Configuration
 
-所有配置通过环境变量设置（参考 `.env` 文件）：
+All configuration is set via environment variables (see `.env`):
 
-### API 与服务器
+### API & Server
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `API_HOST` | `localhost` | 服务监听地址 |
-| `API_PORT` | `8000` | 服务端口 |
-| `API_RELOAD` | `false` | 是否启用热重载 |
-| `CORS_ORIGINS` | `*` | 跨域允许的源 |
-| `LOG_LEVEL` | `INFO` | 日志级别 |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_HOST` | `localhost` | Server listen address |
+| `API_PORT` | `8000` | Server port |
+| `API_RELOAD` | `false` | Enable hot reload |
+| `CORS_ORIGINS` | `*` | Allowed CORS origins |
+| `LOG_LEVEL` | `INFO` | Log level |
 
 ### DeepSeek LLM
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `DEEPSEEK_API_KEY` | `""` | API 密钥（不设置则使用 MockLLM） |
-| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | API 基础地址 |
-| `DEEPSEEK_MODEL` | `deepseek-v4-flash` | 模型名称 |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DEEPSEEK_API_KEY` | `""` | API key (falls back to MockLLM if unset) |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | API base URL |
+| `DEEPSEEK_MODEL` | `deepseek-v4-flash` | Model name |
 
-### 嵌入模型
+### Embedding Model
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `EMBEDDING_MODEL` | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | 嵌入模型名称 |
-| `EMBEDDING_DEVICE` | `cpu` | 运行设备（cpu / cuda） |
-| `HF_ENDPOINT` | `https://hf-mirror.com` | HuggingFace 镜像站 |
-| `MODELS_DIR` | `./models` | 本地模型缓存目录 |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EMBEDDING_MODEL` | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Embedding model name |
+| `EMBEDDING_DEVICE` | `cpu` | Runtime device (cpu / cuda) |
+| `HF_ENDPOINT` | `https://hf-mirror.com` | HuggingFace mirror endpoint |
+| `MODELS_DIR` | `./models` | Local model cache directory |
 
-### 存储与文档
+### Storage & Documents
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `PERSIST_DIR` | `./chroma_dsm5_db` | ChromaDB 持久化目录 |
-| `DOCUMENTS_PATH` | `./dsm5_documents` | 文档文件路径（支持目录或单文件） |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PERSIST_DIR` | `./chroma_dsm5_db` | ChromaDB persistence directory |
+| `DOCUMENTS_PATH` | `./dsm5_documents` | Document path (directory or single file) |
 
-### 检索
+### Retrieval
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `DEFAULT_MODE` | `HYBRID` | 默认检索模式 |
-| `DEFAULT_TOP_K` | `5` | 默认检索数量 |
-| `DEFAULT_VECTOR_WEIGHT` | `0.7` | 默认向量权重（FUSION 模式） |
-| `SIMILARITY_CUTOFF` | `0.2` | 相似度过滤阈值 |
-| `MAX_SOURCES` | `3` | 最大来源数量 |
-| `ENABLE_CONTEXT_REORDER` | `true` | 是否启用上下文重排序（Lost-in-the-Middle 优化） |
-| `ENABLE_METADATA_REPLACEMENT` | `false` | 是否启用元数据替换 |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DEFAULT_MODE` | `HYBRID` | Default retrieval mode |
+| `DEFAULT_TOP_K` | `5` | Default number of results |
+| `DEFAULT_VECTOR_WEIGHT` | `0.7` | Default vector weight (FUSION mode) |
+| `SIMILARITY_CUTOFF` | `0.2` | Similarity filter threshold |
+| `MAX_SOURCES` | `3` | Maximum number of sources |
+| `ENABLE_CONTEXT_REORDER` | `true` | Enable context reordering (Lost-in-the-Middle optimization) |
+| `ENABLE_METADATA_REPLACEMENT` | `false` | Enable metadata replacement |
 
-### 文档解析
+### Document Parsing
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `CHUNK_SIZE` | `1024` | 文档分块大小（字符数） |
-| `CHUNK_OVERLAP` | `100` | 分块重叠大小 |
-| `MAX_FILE_SIZE_MB` | `50` | 最大文件大小（MB） |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CHUNK_SIZE` | `1024` | Document chunk size (characters) |
+| `CHUNK_OVERLAP` | `100` | Chunk overlap size |
+| `MAX_FILE_SIZE_MB` | `50` | Maximum file size (MB) |
 
-## 项目结构
+## Project Structure
 
 ```
 myDSM5RAG/
-├── src/dsm5_rag/                # 核心包
-│   ├── __init__.py              # 包入口，公开 API 导出
-│   ├── api.py                   # FastAPI 微服务（含 LLM）
-│   ├── config.py                # 配置模型（RagConfig）
-│   ├── mcp_server.py            # FastMCP 纯检索服务（无 LLM）
-│   ├── models.py                # Pydantic 数据模型
-│   ├── parser.py                # 文档解析器（PDF/DOCX/TXT）
-│   ├── retriever.py             # 混合检索器（HybridRetriever）
-│   └── system.py                # RAG 系统核心（DeepSeekRAGSystem）
-├── tests/                       # 测试套件
-│   ├── conftest.py              # pytest 共享 fixtures
-│   ├── test_api.py              # API 端点测试
-│   ├── test_config.py           # 配置测试
-│   ├── test_mcp_server.py       # MCP 服务器注册测试
-│   ├── test_models.py           # 数据模型测试
-│   ├── test_parser.py           # 文档解析测试
-│   └── test_retriever.py        # 检索器测试
-├── examples/                    # 使用示例
-│   ├── basic_query.py           # 基本查询
-│   ├── batch_query.py           # 批量查询 & 关键词搜索
-│   └── api_client.py            # HTTP API 客户端
-├── dsm5_documents/              # 文档目录（已 gitignore）
-├── chroma_dsm5_db/              # ChromaDB 数据（已 gitignore）
-├── models/                      # 本地模型缓存（已 gitignore）
-├── .env                         # 环境变量配置（已 gitignore）
-├── .example.env                 # 环境变量模板
-├── pyproject.toml               # 项目配置与依赖
-└── uv.lock                      # uv 锁文件
+├── src/dsm5_rag/                # Core package
+│   ├── __init__.py              # Package entry, public API exports
+│   ├── api.py                   # FastAPI microservice (with LLM)
+│   ├── config.py                # Configuration model (RagConfig)
+│   ├── mcp_server.py            # FastMCP pure retrieval service (no LLM)
+│   ├── models.py                # Pydantic data models
+│   ├── parser.py                # Document parser (PDF/DOCX/TXT)
+│   ├── retriever.py             # Hybrid retriever (HybridRetriever)
+│   └── system.py                # RAG system core (DeepSeekRAGSystem)
+├── tests/                       # Test suite
+│   ├── conftest.py              # Shared pytest fixtures
+│   ├── test_api.py              # API endpoint tests
+│   ├── test_config.py           # Configuration tests
+│   ├── test_mcp_server.py       # MCP server registration tests
+│   ├── test_models.py           # Data model tests
+│   ├── test_parser.py           # Document parser tests
+│   └── test_retriever.py        # Retriever tests
+├── examples/                    # Usage examples
+│   ├── basic_query.py           # Basic query
+│   ├── batch_query.py           # Batch queries & keyword search
+│   └── api_client.py            # HTTP API client
+├── dsm5_documents/              # Documents directory (gitignored)
+├── chroma_dsm5_db/              # ChromaDB data (gitignored)
+├── models/                      # Local model cache (gitignored)
+├── .env                         # Environment variables (gitignored)
+├── .example.env                 # Environment template
+├── pyproject.toml               # Project config & dependencies
+└── uv.lock                      # uv lock file
 ```
 
-## FastAPI 端点
+## FastAPI Endpoints
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/` | 服务信息 |
-| GET | `/health` | 健康检查 |
-| GET | `/status` | 系统状态 |
-| GET | `/index/status` | 索引状态 |
-| GET | `/documents` | 文档列表 |
-| POST | `/query` | 执行查询（支持流式） |
-| POST | `/search/keyword` | 关键词搜索 |
-| POST | `/query/batch` | 批量查询 |
-| POST | `/mode/change` | 切换检索模式 |
-| GET | `/test` | 非流式测试 |
-| GET | `/test/stream` | 流式测试 |
-| GET | `/test/simple` | 简单流式测试 |
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Service info |
+| GET | `/health` | Health check |
+| GET | `/status` | System status |
+| GET | `/index/status` | Index status |
+| GET | `/documents` | Document list |
+| POST | `/query` | Execute a query (streaming supported) |
+| POST | `/search/keyword` | Keyword search |
+| POST | `/query/batch` | Batch queries |
+| POST | `/mode/change` | Switch retrieval mode |
+| GET | `/test` | Non-streaming test |
+| GET | `/test/stream` | Streaming test |
+| GET | `/test/simple` | Simple streaming test |
 
-## FastMCP 服务
+## FastMCP Service
 
-> MCP（Model Context Protocol）是一种标准化协议，为 LLM 应用提供安全、统一的上下文和工具访问方式。
+> MCP (Model Context Protocol) is a standardized protocol that provides LLM applications with secure, unified access to context and tools.
 
-### 工具（Tools）
+### Tools
 
-| 工具 | 说明 |
-|------|------|
-| `build_index` | 构建/重建检索索引，支持 `force_rebuild` 强制重建 |
-| `get_index_status` | 查询索引构建状态（ready / building / not_built） |
-| `search` | 混合/向量/关键词检索，支持四种模式 |
-| `keyword_search` | 纯关键词精确检索 |
-| `list_documents` | 列出已索引文档信息 |
+| Tool | Description |
+|------|-------------|
+| `build_index` | Build/rebuild the retrieval index, supports `force_rebuild` |
+| `get_index_status` | Query index build status (ready / building / not_built) |
+| `search` | Hybrid/vector/keyword retrieval, supports four modes |
+| `keyword_search` | Pure exact keyword retrieval |
+| `list_documents` | List indexed documents |
 
-### 资源（Resources）
+### Resources
 
-| URI | 说明 |
-|-----|------|
-| `dsm5://status` | 系统整体状态 |
-| `dsm5://index/status` | 索引构建状态 |
-| `dsm5://config` | 配置概览（不含密钥） |
-| `dsm5://documents` | 文档文件列表 |
+| URI | Description |
+|-----|-------------|
+| `dsm5://status` | Overall system status |
+| `dsm5://index/status` | Index build status |
+| `dsm5://config` | Configuration overview (secrets excluded) |
+| `dsm5://documents` | Document file list |
 
-### 提示模板（Prompts）
+### Prompts
 
-| 模板 | 说明 |
-|------|------|
-| `dsm5_search_assistant` | 检索助手系统提示，包含工具说明和检索模式指南 |
-| `dsm5_differential_diagnosis(symptoms)` | 基于症状描述生成鉴别诊断检索提示 |
+| Template | Description |
+|----------|-------------|
+| `dsm5_search_assistant` | Retrieval assistant system prompt with tool descriptions and retrieval mode guidance |
+| `dsm5_differential_diagnosis(symptoms)` | Generates a differential diagnosis retrieval prompt from symptom descriptions |
 
-## 检索模式
+## Retrieval Modes
 
-| 模式 | 说明 |
-|------|------|
-| `HYBRID` | 混合检索，向量检索 + 关键词检索结果合并去重 |
-| `VECTOR_ONLY` | 仅向量语义检索 |
-| `KEYWORD_ONLY` | 仅关键词精确检索 |
-| `FUSION` | 融合检索，加权平均排序（可调向量/关键词权重） |
+| Mode | Description |
+|------|-------------|
+| `HYBRID` | Hybrid retrieval, vector + keyword results merged and deduplicated |
+| `VECTOR_ONLY` | Vector semantic search only |
+| `KEYWORD_ONLY` | Exact keyword search only |
+| `FUSION` | Fusion retrieval with weighted average ranking (adjustable vector/keyword weights) |
 
-## 测试
+## Testing
 
 ```bash
-# 运行所有测试
+# Run all tests
 uv run pytest
 
-# 运行指定测试文件
+# Run a specific test file
 uv run pytest tests/test_api.py -v
 
-# 运行 MCP 服务测试
+# Run MCP server tests
 uv run pytest tests/test_mcp_server.py -v
 
-# 查看覆盖率
+# View coverage
 uv run pytest --cov=dsm5_rag
 ```
 
-## 技术栈
+## Tech Stack
 
-- **API 框架**: [FastAPI](https://fastapi.tiangolo.com/) + [uvicorn](https://www.uvicorn.org/)
-- **MCP 框架**: [FastMCP](https://gofastmcp.com/) (v3)
-- **RAG**: [LlamaIndex](https://www.llamaindex.ai/) (向量索引、关键词索引、检索查询引擎)
-- **向量数据库**: [ChromaDB](https://www.trychroma.com/)
-- **嵌入模型**: [sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2)
+- **API framework**: [FastAPI](https://fastapi.tiangolo.com/) + [uvicorn](https://www.uvicorn.org/)
+- **MCP framework**: [FastMCP](https://gofastmcp.com/) (v3)
+- **RAG**: [LlamaIndex](https://www.llamaindex.ai/) (vector index, keyword index, retrieval query engines)
+- **Vector database**: [ChromaDB](https://www.trychroma.com/)
+- **Embedding model**: [sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2)
 - **LLM**: [DeepSeek](https://platform.deepseek.com/) API
-- **数据验证**: [Pydantic](https://docs.pydantic.dev/)
-- **文档解析**: pypdf / python-docx
-- **包管理**: [uv](https://docs.astral.sh/uv/)
-- **构建**: Hatchling
+- **Data validation**: [Pydantic](https://docs.pydantic.dev/)
+- **Document parsing**: pypdf / python-docx
+- **Package management**: [uv](https://docs.astral.sh/uv/)
+- **Build**: Hatchling
 
-## MCP 客户端配置
+## MCP Client Configuration
 
-### stdio 模式（本地/IDE 集成）
+### stdio mode (local/IDE integration)
 
-用于 Claude Desktop、Cursor、VS Code 等支持 MCP 的 IDE：
+For MCP-capable IDEs such as Claude Desktop, Cursor, and VS Code:
 
 ```json
 {
@@ -294,7 +296,7 @@ uv run pytest --cov=dsm5_rag
 }
 ```
 
-### Streamable HTTP 模式（远程服务）
+### Streamable HTTP mode (remote service)
 
 ```json
 {
