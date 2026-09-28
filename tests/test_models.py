@@ -1,11 +1,14 @@
 """Pydantic 数据模型单元测试"""
 
+import pytest
+from pydantic import ValidationError
+
 from dsm5_rag.models import (
-    QueryRequest,
-    KeywordSearchRequest,
     BatchQueryRequest,
-    SystemStatus,
     IndexStatus,
+    KeywordSearchRequest,
+    QueryRequest,
+    SystemStatus,
 )
 
 
@@ -121,3 +124,44 @@ class TestIndexStatus:
         assert status.status == "building"
         assert status.progress == 0.5
         assert status.details["files_processed"] == 5
+
+
+class TestInputLimits:
+    """输入长度/条数上限：一个请求不能把 LLM 配额或网关打爆。"""
+
+    def test_question_default_is_not_verbose(self):
+        assert QueryRequest(question="测试").verbose is False
+
+    def test_question_accepts_4000_chars(self):
+        assert QueryRequest(question="x" * 4000).question
+
+    def test_question_rejects_over_4000_chars(self):
+        with pytest.raises(ValidationError):
+            QueryRequest(question="x" * 4001)
+
+    def test_question_rejects_empty(self):
+        with pytest.raises(ValidationError):
+            QueryRequest(question="")
+
+    def test_keyword_rejects_empty_and_overlong(self):
+        with pytest.raises(ValidationError):
+            KeywordSearchRequest(keyword="")
+        with pytest.raises(ValidationError):
+            KeywordSearchRequest(keyword="x" * 1001)
+
+    def test_keyword_search_defaults_to_no_full_text(self):
+        assert KeywordSearchRequest(keyword="296.3x").verbose is False
+
+    def test_batch_accepts_up_to_20_questions(self):
+        request = BatchQueryRequest(questions=[f"q{i}" for i in range(20)])
+        assert len(request.questions) == 20
+
+    def test_batch_rejects_21_questions(self):
+        with pytest.raises(ValidationError):
+            BatchQueryRequest(questions=[f"q{i}" for i in range(21)])
+
+    def test_batch_rejects_empty_list_and_overlong_item(self):
+        with pytest.raises(ValidationError):
+            BatchQueryRequest(questions=[])
+        with pytest.raises(ValidationError):
+            BatchQueryRequest(questions=["x" * 4001])

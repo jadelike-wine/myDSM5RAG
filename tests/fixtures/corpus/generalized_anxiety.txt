@@ -1,0 +1,32 @@
+Generalized Anxiety Disorder (GAD) 广泛性焦虑障碍
+ICD-9-CM code: 300.02
+ICD-10-CM code: F41.1
+
+Diagnostic criteria for Generalized Anxiety Disorder:
+
+A. Excessive anxiety and worry (apprehensive expectation), occurring more days
+than not for at least 6 months, about a number of events or activities (such as
+work or school performance).
+
+B. The individual finds it difficult to control the worry.
+
+C. The anxiety and worry are associated with three (or more) of the following
+six symptoms (with at least some symptoms having been present for more days than
+not for the past 6 months): Note: In children, only one item is required.
+1. Restlessness or feeling keyed up or on edge.
+2. Being easily fatigued.
+3. Difficulty concentrating or mind going blank.
+4. Irritability (易怒, 激越).
+5. Muscle tension.
+6. Sleep disturbance (difficulty falling or staying asleep, or restless,
+   unsatisfying sleep).
+
+D. The anxiety, worry, or physical symptoms cause clinically significant distress
+or impairment in social, occupational, or other important areas of functioning.
+
+E. The disturbance is not attributable to the physiological effects of a substance
+or another medical condition.
+
+F. The disturbance is not better explained by another mental disorder.
+
+G. Specify whether: with anxious distress. Severity: mild, moderate, severe.

@@ -1,0 +1,42 @@
+Attention-Deficit/Disorder 注意缺陷多动障碍 (ADHD)
+ICD-9-CM code: 314
+ICD-10-CM code: F90.2 (combined presentation)
+
+Diagnostic criteria for Attention-Deficit Hyperactivity Disorder:
+
+A. A persistent pattern of inattention and/or hyperactivity-impulsivity that
+interferes with functioning or development, as characterised by (1) and/or (2):
+
+1. Inattention: Six (or more) of the following symptoms have persisted for at
+least 6 months to a degree that is inconsistent with developmental level:
+   a. Often fails to give close attention to details or makes careless mistakes.
+   b. Often has difficulty sustaining attention in tasks or play activities.
+   c. Often does not seem to listen when spoken to directly.
+   d. Often does not follow through on instructions and fails to finish schoolwork.
+   e. Often has difficulty organising tasks and activities.
+   f. Often avoids, dislikes, or is reluctant to engage in tasks that require
+      sustained mental effort.
+   g. Often loses things necessary for tasks or activities.
+   h. Is often easily distracted by extraneous stimuli.
+   i. Is often forgetful in daily activities.
+
+2. Hyperactivity and impulsivity: Six (or more) of the following symptoms have
+persisted for at least 6 months:
+   a. Often fidgets with or taps hands or feet, or squirms in seat.
+   b. Often leaves seat in situations when remaining seated is expected.
+   c. Often runs about or climbs in situations where it is inappropriate.
+   d. Often unable to play or engage in leisure activities quietly.
+   e. Is often "on the go", acting as if "driven by a motor".
+   f. Often talks excessively.
+   g. Often blurts out an answer before a question has been completed (冲话,
+      response 去抑制).
+   h. Often has difficulty waiting for his or her turn.
+   i. Often interrupts or intrudes on others.
+
+B. Several inattentive or hyperactive-impulsive symptoms were present prior to
+age 12 years.
+
+C. Several symptoms are present in two or more settings.
+
+D. Clear evidence that the symptoms interfere with, or reduce the quality of,
+social, academic, or occupational functioning.

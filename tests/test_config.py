@@ -1,10 +1,10 @@
 """RagConfig 单元测试"""
 
-import os
+import pytest
 
 from dsm5_rag.config import RagConfig
 
-# 测试默认值需忽略的环境变量（conftest 的 autouse fixture 会加载 .env）
+# 测试默认值需忽略的环境变量（conftest 的 autouse fixture 会加载 .env 并做隔离）
 _IGNORED_ENV_VARS = [
     "API_HOST", "API_PORT", "API_RELOAD",
     "DEEPSEEK_MODEL", "DEEPSEEK_BASE_URL",
@@ -15,16 +15,23 @@ _IGNORED_ENV_VARS = [
     "MAX_FILE_SIZE_MB", "MAX_SOURCES",
     "ENABLE_CONTEXT_REORDER", "ENABLE_METADATA_REPLACEMENT",
     "HF_ENDPOINT", "CORS_ORIGINS", "LOG_LEVEL", "MODELS_DIR",
+    "BM25_LANGUAGE", "BM25_SKIP_STEMMING",
+    "BATCH_CONCURRENCY", "STREAM_CONTEXT_CHAR_LIMIT",
 ]
+
+
+@pytest.fixture(autouse=True)
+def clean_env(monkeypatch):
+    """配置默认值测试必须与外部环境变量无关。"""
+    for var in _IGNORED_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
 
 
 class TestRagConfig:
     """测试 RagConfig 配置类"""
 
-    def test_default_values(self, monkeypatch):
+    def test_default_values(self):
         """测试默认配置值（清除 .env 干扰）"""
-        for var in _IGNORED_ENV_VARS:
-            monkeypatch.delenv(var, raising=False)
         config = RagConfig()
         assert config.api_host == "localhost"
         assert config.api_port == 8000
@@ -43,6 +50,17 @@ class TestRagConfig:
         assert ".pdf" in config.supported_extensions
         assert ".docx" in config.supported_extensions
         assert ".txt" in config.supported_extensions
+
+    def test_bm25_defaults(self):
+        """关键词通道（BM25）配置默认值。"""
+        config = RagConfig()
+        assert config.bm25_language == "en"
+        assert config.bm25_skip_stemming is False
+
+    def test_batch_and_stream_defaults(self):
+        config = RagConfig()
+        assert config.batch_concurrency == 4
+        assert config.stream_context_char_limit == 24000
 
     def test_env_override(self, monkeypatch):
         """测试环境变量覆盖默认值"""

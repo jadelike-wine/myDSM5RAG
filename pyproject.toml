@@ -13,6 +13,9 @@ dependencies = [
     "llama-index-llms-deepseek>=0.2.0",
     "llama-index-embeddings-huggingface>=0.6.0",
     "llama-index-vector-stores-chroma>=0.5.0",
+    # 关键词通道（BM25）。0.8.0 起底层实现是 bm25s + PyStemmer（由本包自动带入），
+    # 不再依赖 rank_bm25，因此这里不额外声明 rank-bm25。
+    "llama-index-retrievers-bm25>=0.8.0",
     "chromadb>=1.4.0",
     "fastapi>=0.128.0",
     "uvicorn>=0.40.0",
@@ -47,11 +50,69 @@ include = ["src/dsm5_rag"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "error::RuntimeWarning",
+]
 
 [dependency-groups]
 dev = [
+    # httpx 与 httpx2 并存不是笔误：starlette 的 TestClient 目前会提示
+    # "install httpx2 instead"，两个都要留着测试客户端才能正常工作。
     "httpx>=0.28.1",
     "httpx2>=2.5.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.9.0",
+    "pyflakes>=3.2.0",
 ]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+extend-exclude = ["models", "chroma_dsm5_db"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes（未用 import、无效 global、f-string 无占位符等）
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "B",   # flake8-bugbear（可变默认参数、异常吞掉等）
+    "C4",  # comprehension 相关
+    "SIM", # 可简化项
+    "RET", # return 一致性
+]
+ignore = [
+    "E501",   # 行宽交给 formatter，中文注释容易超
+    "B008",   # FastAPI 依赖注入惯用 Query(...)
+    "B904",   # raise ... from err：现有 500 处理链大量存在，属独立整理项
+    "B905",   # zip(strict=) 在测试里反而容易掩盖长度不一致
+    "SIM105", # try/except/pass 的 contextlib 化提示
+    "RET504", # 冗余中间变量
+    # pyupgrade 一族（typing.Dict -> dict、Optional[X] -> X | None）是纯风格改写，
+    # 涉及 100+ 处注解；留给独立的格式化 PR，避免和本次功能性改动混在一起。
+    "UP",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 脚本要在 import 之前设置环境变量/路径，E402 是刻意的
+"scripts/*" = ["E402"]
+"tests/*" = ["E402"]
+# system.py 必须先 load_dotenv()（HF_ENDPOINT 要在 huggingface_hub 被导入前生效），
+# 再 import chromadb / llama_index，因此这里的"导入未置顶"是设计而非疏漏。
+"src/dsm5_rag/system.py" = ["E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dsm5_rag"]
+
+[tool.coverage.run]
+source = ["src/dsm5_rag"]
+omit = ["*/api.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

@@ -1,0 +1,32 @@
+Bipolar I Disorder 双相 I 型障碍
+ICD-9-CM code: 296.4x, 296.6x
+ICD-10-CM code: F31.x
+
+Diagnostic criteria for Bipolar I Disorder:
+
+A. There has been at least one manic episode. The manic episode may have been
+preceded by or may be followed by hypomanic or major depressive episodes.
+
+B. The occurrence of the manic episodes is not better explained by schizoaffective
+disorder, schizophrenia, schizophreniform disorder, delusional disorder, and other
+specified and unspecified schizophrenia spectrum and other delusional disorders.
+
+C. There is no superimposed psychotic disorder, and the mood disturbance is not
+attributable to the physiological effects of a substance.
+
+Definition of a manic episode: A distinct period of abnormally and persistently
+elevated, expansive, or irritable mood and abnormally and persistently increased
+goal-directed activity or energy, lasting at least 1 week and present most of the
+day, nearly every day (or any duration if hospitalisation is necessary).
+
+During the period of mood disturbance and increased energy or activity, three (or
+more) of the following symptoms (four if the mood is only irritable) are present
+to a significant degree and represent a noticeable change from usual behaviour:
+1. Inflated self-esteem or grandiosity.
+2. Decreased need for sleep.
+3. More talkative than usual or pressure to keep talking.
+4. Flight of ideas or subjective experience that thoughts are racing.
+5. Distractibility.
+6. Increase in goal-directed activity or psychomotor agitation.
+7. Excessive involvement in activities that have a high potential for painful
+   consequences (e.g., engaging in unrestrained buying sprees, sexual indiscretions).

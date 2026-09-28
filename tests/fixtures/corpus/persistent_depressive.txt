@@ -1,0 +1,42 @@
+Persistent Depressive Disorder (Dysthymia) 心境恶劣障碍 持续性抑郁障碍
+ICD-9-CM code: 300.4
+ICD-10-CM code: F34.1
+
+Diagnostic criteria for Persistent Depressive Disorder (Dysthymia):
+
+A. Depressed mood for most of the day, for more days than not, as indicated by
+either subjective account or observation by others, for at least 2 years. Note:
+In children and adolescents, mood can be irritable and duration must be at least
+1 year.
+
+B. Presence, while depressed mood, of two (or more) of the following:
+1. Poor appetite or overeating.
+2. Insomnia or hypersomnia.
+3. Low energy or fatigue.
+4. Low self-esteem.
+5. Poor concentration or difficulty making decisions.
+6. Feelings of hopelessness.
+
+C. During the 2-year period of the disturbance, the individual has never been
+without the symptoms in Criteria A and B for more than 2 months at a time.
+
+D. During the first 2 years of the disturbance, there may have been one or more
+major depressive episodes may have been present, but full criteria for major
+depressive disorder were never met.
+
+E. Criteria for a major depressive disorder may continuously be present for
+2 years or more.
+
+F. There has never been a manic episode or a hypomanic episode, and criteria
+have never been met for cyclothymic disorder.
+
+G. The disturbance is not better explained by a persistent psychotic disorder.
+
+H. The symptoms are not attributable to the physiological effects of a substance
+or another medical condition.
+
+I. The symptoms cause clinically significant distress or impairment in social,
+occupational, or other important areas of functioning.
+
+Severity specifiers: mild (2-3 symptoms), moderate (4-5 symptoms), severe (6 or
+more symptoms). Distress 苦痛, impairment 功能损害.

@@ -34,6 +34,9 @@ logger = logging.getLogger(__name__)
 
 rag_system: DeepSeekRAGSystem | None = None
 
+# 后台索引重建任务的引用集合（避免 asyncio.Task 被提前 GC）
+_BACKGROUND_TASKS: set = set()
+
 
 # ==================== 流式响应生成器 ====================
 
@@ -133,7 +136,7 @@ def custom_openapi():
     api_port = int(os.getenv("API_PORT", "8000"))
     openapi_schema["servers"] = [{"url": f"http://localhost:{api_port}", "description": "本地服务器"}]
     for path, path_item in openapi_schema["paths"].items():
-        for method, operation in path_item.items():
+        for _method, operation in path_item.items():
             if "query" in path or "test/stream" in path:
                 operation["description"] = (
                     operation.get("description", "")
@@ -164,7 +167,6 @@ app.add_middleware(
 @app.get("/", tags=["健康检查"])
 async def root():
     """根端点，返回服务信息"""
-    global rag_system
     status = "uninitialized"
     if rag_system:
         system_status = rag_system.get_status()
@@ -189,6 +191,8 @@ async def root():
             "health": "/health",
             "status": "/status",
             "index_status": "/index/status",
+            "index_diff": "/index/diff",
+            "index_rebuild": "/index/rebuild",
             "documents": "/documents",
             "query": "/query",
             "keyword_search": "/search/keyword",
@@ -204,7 +208,6 @@ async def root():
 @app.get("/health", tags=["健康检查"])
 async def health_check():
     """健康检查端点"""
-    global rag_system
     if rag_system and rag_system.initialized:
         return {"status": "healthy", "timestamp": datetime.now().isoformat()}
     return {"status": "initializing", "timestamp": datetime.now().isoformat()}
@@ -213,7 +216,6 @@ async def health_check():
 @app.get("/status", response_model=SystemStatus, tags=["系统状态"])
 async def get_system_status():
     """获取系统状态"""
-    global rag_system
     if not rag_system:
         raise HTTPException(status_code=503, detail="RAG系统未初始化")
     return rag_system.get_status()
@@ -222,16 +224,73 @@ async def get_system_status():
 @app.get("/index/status", response_model=IndexStatus, tags=["系统状态"])
 async def get_index_status():
     """获取索引状态"""
-    global rag_system
     if not rag_system:
         raise HTTPException(status_code=503, detail="RAG系统未初始化")
     return rag_system.get_index_status()
 
 
+@app.get("/index/diff", tags=["系统状态"])
+async def get_index_diff():
+    """磁盘文档与索引清单的差异（新增/变更/删除的文件，以及配置变化原因）。"""
+    if not rag_system:
+        raise HTTPException(status_code=503, detail="RAG系统未初始化")
+    try:
+        return JSONResponse(content=await rag_system.index_diff())
+    except Exception as e:
+        logger.error(f"获取索引差异失败: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"获取索引差异失败: {str(e)}"
+        )
+
+
+@app.post("/index/rebuild", tags=["索引管理"])
+async def rebuild_index(
+    force: bool = Query(
+        default=False, description="是否强制重建（忽略文档未变化的判定）"
+    ),
+    background: bool = Query(
+        default=True,
+        description="默认后台执行，立即返回并用 /index/status 轮询进度；"
+        "设为 false 时同步等待（只适合小语料/测试）",
+    ),
+):
+    """重建索引：先比对文档清单，有变化（或 force=true）才重新构建。
+
+    大语料重建要跑完整 embedding，HTTP 会超时，所以默认放后台执行。
+    """
+    if not rag_system:
+        raise HTTPException(status_code=503, detail="RAG系统未初始化")
+
+    if background:
+        task = asyncio.create_task(rag_system.build_index(force_rebuild=force))
+        # 持有引用，避免任务被 GC 掉；完成后自动移除
+        _BACKGROUND_TASKS.add(task)
+        task.add_done_callback(_BACKGROUND_TASKS.discard)
+        return JSONResponse(
+            status_code=202,
+            content={
+                "status": "started",
+                "message": "索引重建已在后台启动，请用 GET /index/status 查看进度",
+                "force": force,
+                "timestamp": datetime.now().isoformat(),
+            },
+        )
+
+    try:
+        result = await rag_system.build_index(force_rebuild=force)
+        return JSONResponse(content={**result, "timestamp": datetime.now().isoformat()})
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"索引重建失败: {e}")
+        raise HTTPException(status_code=500, detail="索引重建失败")
+
+
 @app.get("/documents", tags=["文档管理"])
 async def list_documents():
     """列出所有文档文件信息"""
-    global rag_system
     if not rag_system:
         raise HTTPException(status_code=503, detail="RAG系统未初始化")
     try:
@@ -250,7 +309,6 @@ async def query_endpoint(
     ),
 ):
     """执行查询"""
-    global rag_system
     if not rag_system:
         raise HTTPException(status_code=503, detail="RAG系统未初始化")
 
@@ -279,44 +337,43 @@ async def query_endpoint(
                     json_stream_generator(stream_response),
                     media_type=result.get("media_type", "application/x-ndjson"),
                 )
-            else:
 
-                async def default_stream():
-                    yield (
-                        json.dumps(
-                            {
-                                "event": "query_started",
-                                "question": request.question,
-                                "mode": request.mode,
-                                "timestamp": datetime.now().isoformat(),
-                            }
-                        )
-                        + "\n"
+            async def default_stream():
+                yield (
+                    json.dumps(
+                        {
+                            "event": "query_started",
+                            "question": request.question,
+                            "mode": request.mode,
+                            "timestamp": datetime.now().isoformat(),
+                        }
                     )
-                    if isinstance(result, dict) and "answer" in result:
-                        yield (
-                            json.dumps(
-                                {
-                                    "event": "answer_chunk",
-                                    "chunk": result["answer"],
-                                    "is_complete": True,
-                                }
-                            )
-                            + "\n"
-                        )
-                    yield (
-                        json.dumps(
-                            {
-                                "event": "query_completed",
-                                "timestamp": datetime.now().isoformat(),
-                            }
-                        )
-                        + "\n"
-                    )
-
-                return StreamingResponse(
-                    default_stream(), media_type="application/x-ndjson"
+                    + "\n"
                 )
+                if isinstance(result, dict) and "answer" in result:
+                    yield (
+                        json.dumps(
+                            {
+                                "event": "answer_chunk",
+                                "chunk": result["answer"],
+                                "is_complete": True,
+                            }
+                        )
+                        + "\n"
+                    )
+                yield (
+                    json.dumps(
+                        {
+                            "event": "query_completed",
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
+                    + "\n"
+                )
+
+            return StreamingResponse(
+                default_stream(), media_type="application/x-ndjson"
+            )
 
         return JSONResponse(content=result)
 
@@ -330,7 +387,6 @@ async def query_endpoint(
 @app.post("/search/keyword", tags=["搜索"])
 async def keyword_search_endpoint(request: KeywordSearchRequest):
     """执行纯关键词搜索"""
-    global rag_system
     if not rag_system:
         raise HTTPException(status_code=503, detail="RAG系统未初始化")
     if not rag_system.index_built:
@@ -351,7 +407,6 @@ async def keyword_search_endpoint(request: KeywordSearchRequest):
 @app.post("/query/batch", tags=["查询"])
 async def batch_query_endpoint(request: BatchQueryRequest):
     """批量查询"""
-    global rag_system
     if not rag_system:
         raise HTTPException(status_code=503, detail="RAG系统未初始化")
     if not rag_system.index_built:
@@ -385,8 +440,7 @@ async def change_mode(
         description="向量权重（仅FUSION模式有效）",
     ),
 ):
-    """更改检索模式"""
-    global rag_system
+    """更改服务级默认检索参数（不影响显式传参的请求）"""
     if not rag_system:
         raise HTTPException(status_code=503, detail="RAG系统未初始化")
 
@@ -394,22 +448,30 @@ async def change_mode(
         if mode not in ["HYBRID", "VECTOR_ONLY", "KEYWORD_ONLY", "FUSION"]:
             raise HTTPException(status_code=400, detail="无效的检索模式")
 
-        await rag_system.create_query_engine(
-            hybrid_mode=mode,
-            similarity_top_k=similarity_top_k,
-            vector_weight=vector_weight,
+        current_mode, current_top_k, current_weight = (
+            rag_system.set_default_search_params(
+                mode=mode,
+                similarity_top_k=similarity_top_k,
+                vector_weight=vector_weight,
+            )
         )
 
         return JSONResponse(
             content={
                 "status": "success",
-                "message": f"检索模式已更改为 {mode}",
-                "mode": mode,
-                "similarity_top_k": similarity_top_k,
-                "vector_weight": vector_weight if mode == "FUSION" else None,
+                "message": f"检索模式已更改为 {current_mode}",
+                "mode": current_mode,
+                "similarity_top_k": current_top_k,
+                "vector_weight": (
+                    current_weight if current_mode == "FUSION" else None
+                ),
                 "timestamp": datetime.now().isoformat(),
             }
         )
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"模式更改失败: {e}")
         raise HTTPException(
@@ -420,7 +482,6 @@ async def change_mode(
 @app.get("/test", tags=["测试"])
 async def test_endpoint():
     """测试端点，验证系统基本功能（非流式）"""
-    global rag_system
     if not rag_system:
         return JSONResponse(
             status_code=503,
@@ -464,7 +525,6 @@ async def test_stream_endpoint(
     ),
 ):
     """测试流式查询端点"""
-    global rag_system
     if not rag_system:
         raise HTTPException(status_code=503, detail="RAG系统未初始化")
     if not rag_system.index_built:
@@ -490,42 +550,41 @@ async def test_stream_endpoint(
                 json_stream_generator(stream_response),
                 media_type=result.get("media_type", "application/x-ndjson"),
             )
-        else:
-            async def default_stream():
-                yield (
-                    json.dumps(
-                        {
-                            "event": "query_started",
-                            "question": request.question,
-                            "mode": request.mode,
-                            "timestamp": datetime.now().isoformat(),
-                        }
-                    )
-                    + "\n"
+        async def default_stream():
+            yield (
+                json.dumps(
+                    {
+                        "event": "query_started",
+                        "question": request.question,
+                        "mode": request.mode,
+                        "timestamp": datetime.now().isoformat(),
+                    }
                 )
-                yield (
-                    json.dumps(
-                        {
-                            "event": "answer_chunk",
-                            "chunk": "DSM-5流式查询测试响应",
-                            "is_complete": True,
-                        }
-                    )
-                    + "\n"
-                )
-                yield (
-                    json.dumps(
-                        {
-                            "event": "query_completed",
-                            "timestamp": datetime.now().isoformat(),
-                        }
-                    )
-                    + "\n"
-                )
-
-            return StreamingResponse(
-                default_stream(), media_type="application/x-ndjson"
+                + "\n"
             )
+            yield (
+                json.dumps(
+                    {
+                        "event": "answer_chunk",
+                        "chunk": "DSM-5流式查询测试响应",
+                        "is_complete": True,
+                    }
+                )
+                + "\n"
+            )
+            yield (
+                json.dumps(
+                    {
+                        "event": "query_completed",
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+                + "\n"
+            )
+
+        return StreamingResponse(
+            default_stream(), media_type="application/x-ndjson"
+        )
     except Exception as e:
         logger.error(f"流式查询测试失败: {e}")
         raise HTTPException(
@@ -536,7 +595,6 @@ async def test_stream_endpoint(
 @app.get("/test/simple", tags=["测试"])
 async def test_simple_stream_endpoint():
     """简单流式测试端点（适合Swagger UI）"""
-    global rag_system
     if not rag_system:
         raise HTTPException(status_code=503, detail="RAG系统未初始化")
     if not rag_system.index_built:

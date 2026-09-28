@@ -15,8 +15,7 @@ DSM-5 RAG MCP Server — 纯检索服务
 import json
 import logging
 import os
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from dotenv import load_dotenv
 from fastmcp import FastMCP
@@ -74,7 +73,7 @@ def _format_nodes(nodes, system: DeepSeekRAGSystem) -> str:
 
     lines = [f"检索到 {len(nodes)} 个结果:"]
     count = 0
-    for i, node in enumerate(nodes):
+    for node in nodes:
         score = node.score if node.score is not None else 0
         if score < cutoff:
             continue
@@ -96,7 +95,7 @@ def _format_nodes(nodes, system: DeepSeekRAGSystem) -> str:
         if "fusion_score" in meta:
             lines.append(f"- **融合分数**: {meta['fusion_score']:.4f}")
 
-        lines.append(f"- **文本预览**:")
+        lines.append("- **文本预览**:")
         preview = node.node.text[:300].replace("\n", " ")
         lines.append(f"  {preview}...")
 
