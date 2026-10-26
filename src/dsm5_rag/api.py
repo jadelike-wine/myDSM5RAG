@@ -136,16 +136,16 @@ def custom_openapi():
     api_port = int(os.getenv("API_PORT", "8000"))
     openapi_schema["servers"] = [{"url": f"http://localhost:{api_port}", "description": "本地服务器"}]
     for path, path_item in openapi_schema["paths"].items():
+        if "query" not in path:
+            continue
         for _method, operation in path_item.items():
-            if "query" in path or "test/stream" in path:
-                operation["description"] = (
-                    operation.get("description", "")
-                    + "\n\n**流式响应说明:**\n"
-                    + "- 当`stream=true`时，返回流式响应\n"
-                    + "- 格式: `application/x-ndjson` (每行一个JSON对象)\n"
-                    + "- Swagger UI可能无法正确显示流式响应，建议使用curl或专门的API测试工具\n"
-                    + "- 使用`/test/simple`端点可获得更适合Swagger UI的流式响应"
-                )
+            operation["description"] = (
+                operation.get("description", "")
+                + "\n\n**流式响应说明:**\n"
+                + "- 当`stream=true`时，返回流式响应\n"
+                + "- 格式: `application/x-ndjson` (每行一个JSON对象)\n"
+                + "- Swagger UI可能无法正确显示流式响应，建议使用curl或专门的API测试工具"
+            )
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
@@ -198,9 +198,6 @@ async def root():
             "keyword_search": "/search/keyword",
             "batch_query": "/query/batch",
             "change_mode": "/mode/change",
-            "test": "/test",
-            "test_stream": "/test/stream",
-            "test_simple": "/test/simple",
         },
     }
 
@@ -477,149 +474,6 @@ async def change_mode(
         raise HTTPException(
             status_code=500, detail=f"模式更改失败: {str(e)}"
         )
-
-
-@app.get("/test", tags=["测试"])
-async def test_endpoint():
-    """测试端点，验证系统基本功能（非流式）"""
-    if not rag_system:
-        return JSONResponse(
-            status_code=503,
-            content={"status": "error", "message": "RAG系统未初始化"},
-        )
-
-    try:
-        status = rag_system.get_status()
-        test_result = None
-        if rag_system.index_built:
-            try:
-                request = QueryRequest(
-                    question="What are the diagnostic criteria for Major Depressive Disorder?",
-                    mode="HYBRID",
-                    similarity_top_k=2,
-                    stream=False,
-                )
-                test_result = await rag_system.query(request)
-            except Exception as e:
-                test_result = {"error": str(e)}
-
-        return JSONResponse(
-            content={
-                "status": "success",
-                "system_status": status.model_dump(),
-                "test_query": test_result,
-                "timestamp": datetime.now().isoformat(),
-            }
-        )
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "message": str(e)},
-        )
-
-
-@app.get("/test/stream", tags=["测试"])
-async def test_stream_endpoint(
-    format: str = Query(
-        "json", description="响应格式: json (默认), text (纯文本)"
-    ),
-):
-    """测试流式查询端点"""
-    if not rag_system:
-        raise HTTPException(status_code=503, detail="RAG系统未初始化")
-    if not rag_system.index_built:
-        raise HTTPException(status_code=503, detail="索引未构建")
-
-    try:
-        request = QueryRequest(
-            question="What are the diagnostic criteria for Major Depressive Disorder?",
-            mode="HYBRID",
-            similarity_top_k=2,
-            stream=True,
-        )
-        result = await rag_system.query(request)
-
-        if isinstance(result, dict) and "streaming_response" in result:
-            stream_response = result["streaming_response"]
-            if format == "text":
-                return StreamingResponse(
-                    simple_stream_generator(stream_response),
-                    media_type="text/plain; charset=utf-8",
-                )
-            return StreamingResponse(
-                json_stream_generator(stream_response),
-                media_type=result.get("media_type", "application/x-ndjson"),
-            )
-        async def default_stream():
-            yield (
-                json.dumps(
-                    {
-                        "event": "query_started",
-                        "question": request.question,
-                        "mode": request.mode,
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-                + "\n"
-            )
-            yield (
-                json.dumps(
-                    {
-                        "event": "answer_chunk",
-                        "chunk": "DSM-5流式查询测试响应",
-                        "is_complete": True,
-                    }
-                )
-                + "\n"
-            )
-            yield (
-                json.dumps(
-                    {
-                        "event": "query_completed",
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                )
-                + "\n"
-            )
-
-        return StreamingResponse(
-            default_stream(), media_type="application/x-ndjson"
-        )
-    except Exception as e:
-        logger.error(f"流式查询测试失败: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"流式查询测试失败: {str(e)}"
-        )
-
-
-@app.get("/test/simple", tags=["测试"])
-async def test_simple_stream_endpoint():
-    """简单流式测试端点（适合Swagger UI）"""
-    if not rag_system:
-        raise HTTPException(status_code=503, detail="RAG系统未初始化")
-    if not rag_system.index_built:
-        raise HTTPException(status_code=503, detail="索引未构建")
-
-    async def simple_test_stream():
-        yield "DSM-5知识库测试流式查询开始\n\n"
-        yield "这是一个DSM-5诊断标准测试响应，展示流式查询功能\n\n"
-        yield "示例来源:\n"
-        yield "  1. Major Depressive Disorder (MDD)诊断标准\n"
-        yield "  2. Bipolar I Disorder诊断标准\n"
-        yield "  3. Generalized Anxiety Disorder (GAD)诊断标准\n\n"
-        yield f"查询完成于: {datetime.now().isoformat()}\n"
-        await asyncio.sleep(0.5)
-        if rag_system.index_built:
-            yield "\n系统信息:\n"
-            status = rag_system.get_status()
-            yield f"  索引状态: {'已构建' if status.index_built else '未构建'}\n"
-            yield f"  文档数量: {status.document_count}\n"
-            yield f"  嵌入模型: {status.embedding_model}\n"
-            yield f"  运行时间: {status.uptime:.1f} 秒\n"
-
-    return StreamingResponse(
-        simple_test_stream(), media_type="text/plain; charset=utf-8"
-    )
 
 
 # ==================== 错误处理 ====================

@@ -20,7 +20,6 @@ from tests.lexical_embedding import install_fake_huggingface_embedding
 _ISOLATED_ENV = {
     "DEEPSEEK_API_KEY": "",
     "LOG_LEVEL": "WARNING",
-    "ENABLE_METADATA_REPLACEMENT": "false",
     "MAX_SOURCES": "3",
     "SIMILARITY_CUTOFF": "0.2",
     "DEFAULT_MODE": "HYBRID",

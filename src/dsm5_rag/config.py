@@ -66,9 +66,6 @@ class RagConfig:
         self.enable_context_reorder = (
             os.getenv("ENABLE_CONTEXT_REORDER", "true").lower() == "true"
         )
-        self.enable_metadata_replacement = (
-            os.getenv("ENABLE_METADATA_REPLACEMENT", "false").lower() == "true"
-        )
         self.max_sources = int(os.getenv("MAX_SOURCES", "3"))
         # 流式回答时拼进提示词的上下文长度上限（字符数，超出后从尾部丢弃节点）
         self.stream_context_char_limit = int(

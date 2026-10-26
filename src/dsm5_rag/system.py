@@ -6,6 +6,7 @@ import logging
 import os
 import threading
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List
@@ -29,7 +30,6 @@ from llama_index.core import (
 from llama_index.core.node_parser import HierarchicalNodeParser
 from llama_index.core.postprocessor import (
     LongContextReorder,
-    MetadataReplacementPostProcessor,
     SimilarityPostprocessor,
 )
 from llama_index.core.prompts import PromptTemplate
@@ -83,7 +83,10 @@ class DeepSeekRAGSystem:
         self.default_vector_weight = self.config.default_vector_weight
         self.index_building = False
         self.index_build_progress = 0.0
-        self._async_lock = asyncio.Lock()
+        # 索引构建互斥。用 threading.Lock 而非 asyncio.Lock：构建可能同时来自
+        # 启动线程的新事件循环和 FastAPI 的事件循环，asyncio 锁一旦在其中一个
+        # 循环上等待过，另一个循环再用就会报 "bound to a different event loop"。
+        self._index_lock = threading.Lock()
         self.document_files: list[Path] = []
         self.total_documents = 0
 
@@ -259,11 +262,20 @@ class DeepSeekRAGSystem:
                 "索引加载成功（向量索引 + BM25 关键词索引，%d 个关键词节点）",
                 keyword_index.node_count,
             )
-            await self.create_query_engine()
         except Exception as e:
             logger.error(f"索引加载失败: {e}")
             self.index_built = False
             raise
+
+    @asynccontextmanager
+    async def _index_build_slot(self) -> AsyncGenerator[bool, None]:
+        """非阻塞获取索引构建权；拿不到时 yield False，由调用方立即返回。"""
+        acquired = self._index_lock.acquire(blocking=False)
+        try:
+            yield acquired
+        finally:
+            if acquired:
+                self._index_lock.release()
 
     async def build_index(self, force_rebuild: bool = False) -> Dict[str, Any]:
         """构建/重建混合索引。
@@ -272,8 +284,8 @@ class DeepSeekRAGSystem:
         每个文件的 sha256/mtime/size 以及切分相关配置比对：
         没有任何变化时直接加载现有索引（不重新 embedding），有变化才重建。
         """
-        async with self._async_lock:
-            if self.index_building:
+        async with self._index_build_slot() as acquired:
+            if not acquired:
                 return {"status": "building", "message": "索引正在构建中，请稍候"}
 
             self.index_building = True
@@ -373,7 +385,6 @@ class DeepSeekRAGSystem:
                 self.index_built = True
                 self.index_build_progress = 1.0
                 logger.info("混合索引构建完成")
-                await self.create_query_engine()
 
                 return {
                     "status": "built",
@@ -396,7 +407,7 @@ class DeepSeekRAGSystem:
         """解析所有支持格式的文档"""
         logger.info(f"正在解析文档文件: {len(self.document_files)} 个文件")
         all_documents: List[Document] = []
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         batch_size = 5
         total_files = len(self.document_files)
 
@@ -592,10 +603,6 @@ class DeepSeekRAGSystem:
         ]
         if self.config.enable_context_reorder:
             postprocessors.append(LongContextReorder())
-        if self.config.enable_metadata_replacement:
-            postprocessors.append(
-                MetadataReplacementPostProcessor(target_metadata_key="window")
-            )
         return postprocessors
 
     def build_query_engine(
@@ -625,26 +632,6 @@ class DeepSeekRAGSystem:
             text_qa_template=self.QA_PROMPT,
             verbose=False,
             streaming=streaming,
-        )
-
-    async def create_query_engine(
-        self,
-        hybrid_mode: str | None = None,
-        similarity_top_k: int | None = None,
-        vector_weight: float | None = None,
-    ) -> RetrieverQueryEngine:
-        """兼容旧入口：按给定参数（或服务默认值）创建一个查询引擎并返回。
-
-        注意：这里**不会**把引擎存成实例状态，调用方用完即弃。
-        """
-        mode, top_k, weight = self._normalize_search_params(
-            mode=hybrid_mode,
-            similarity_top_k=similarity_top_k,
-            vector_weight=vector_weight,
-        )
-        logger.info(f"创建混合查询引擎（模式: {mode}, top_k: {top_k}）")
-        return self.build_query_engine(
-            mode=mode, similarity_top_k=top_k, vector_weight=weight
         )
 
     @staticmethod

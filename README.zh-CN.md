@@ -153,7 +153,6 @@ uv run python examples/api_client.py
 | `SIMILARITY_CUTOFF` | `0.2` | 相似度过滤阈值（两路通用，分数已统一到 0~1） |
 | `MAX_SOURCES` | `3` | `/query` 与 `/search/keyword` 最多返回的来源条数 |
 | `ENABLE_CONTEXT_REORDER` | `true` | 是否启用上下文重排序（Lost-in-the-Middle 优化） |
-| `ENABLE_METADATA_REPLACEMENT` | `false` | 是否启用元数据替换（依赖 sentence-window 切分，配合当前分层切分请保持 false） |
 | `BATCH_CONCURRENCY` | `4` | `POST /query/batch` 的单请求并发上限（`asyncio.Semaphore`） |
 | `STREAM_CONTEXT_CHAR_LIMIT` | `24000` | 流式回答拼进提示词的上下文长度上限（字符） |
 
@@ -238,9 +237,6 @@ myDSM5RAG/
 | POST | `/search/keyword` | BM25 关键词搜索（同样受 cutoff 与 `max_sources` 截断；`verbose` 才返回全文） |
 | POST | `/query/batch` | 批量查询（单次最多 20 条，`BATCH_CONCURRENCY` 并发上限） |
 | POST | `/mode/change` | 修改服务级默认检索参数 |
-| GET | `/test` | 非流式测试 |
-| GET | `/test/stream` | 流式测试 |
-| GET | `/test/simple` | 简单流式测试 |
 
 ### 流式格式（`POST /query` 且 `"stream": true`）
 

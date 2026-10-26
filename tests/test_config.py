@@ -13,7 +13,7 @@ _IGNORED_ENV_VARS = [
     "DEFAULT_MODE", "DEFAULT_TOP_K", "DEFAULT_VECTOR_WEIGHT",
     "SIMILARITY_CUTOFF", "CHUNK_SIZE", "CHUNK_OVERLAP",
     "MAX_FILE_SIZE_MB", "MAX_SOURCES",
-    "ENABLE_CONTEXT_REORDER", "ENABLE_METADATA_REPLACEMENT",
+    "ENABLE_CONTEXT_REORDER",
     "HF_ENDPOINT", "CORS_ORIGINS", "LOG_LEVEL", "MODELS_DIR",
     "BM25_LANGUAGE", "BM25_SKIP_STEMMING",
     "BATCH_CONCURRENCY", "STREAM_CONTEXT_CHAR_LIMIT",
@@ -46,7 +46,6 @@ class TestRagConfig:
         assert config.max_file_size_mb == 50
         assert config.max_sources == 3
         assert config.enable_context_reorder is True
-        assert config.enable_metadata_replacement is False
         assert ".pdf" in config.supported_extensions
         assert ".docx" in config.supported_extensions
         assert ".txt" in config.supported_extensions

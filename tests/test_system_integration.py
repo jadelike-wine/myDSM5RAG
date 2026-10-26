@@ -63,6 +63,16 @@ class TestIndexBuild:
         result = asyncio.run(system.build_index())
         assert result["status"] == "loaded"
 
+    async def test_concurrent_build_returns_building(self, system):
+        """已有构建在跑时，新请求立即返回 building，不阻塞也不重复构建。"""
+        assert system._index_lock.acquire(blocking=False)
+        try:
+            result = await system.build_index()
+            assert result["status"] == "building"
+        finally:
+            system._index_lock.release()
+        assert system.index_building is False
+
 
 class TestKeywordChannel:
     def test_keyword_only_respects_top_k(self, system):

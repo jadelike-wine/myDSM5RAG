@@ -153,7 +153,6 @@ All configuration is set via environment variables (see `.env`):
 | `SIMILARITY_CUTOFF` | `0.2` | Similarity filter threshold (applies to both channels; scores are 0~1) |
 | `MAX_SOURCES` | `3` | Maximum number of sources returned by `/query` and `/search/keyword` |
 | `ENABLE_CONTEXT_REORDER` | `true` | Enable context reordering (Lost-in-the-Middle optimization) |
-| `ENABLE_METADATA_REPLACEMENT` | `false` | Enable metadata replacement (requires a sentence-window parser; keep `false` with hierarchical chunking) |
 | `BATCH_CONCURRENCY` | `4` | `asyncio.Semaphore` limit for `POST /query/batch` |
 | `STREAM_CONTEXT_CHAR_LIMIT` | `24000` | Character cap on the prompt context used for streaming answers |
 
@@ -238,9 +237,6 @@ myDSM5RAG/
 | POST | `/search/keyword` | BM25 keyword search (cutoff + `max_sources` applied; `verbose` for full text) |
 | POST | `/query/batch` | Batch queries (max 20 questions, `BATCH_CONCURRENCY` semaphore) |
 | POST | `/mode/change` | Change service-level default retrieval parameters |
-| GET | `/test` | Non-streaming test |
-| GET | `/test/stream` | Streaming test |
-| GET | `/test/simple` | Simple streaming test |
 
 ### Streaming format (`POST /query` with `"stream": true`)
 
