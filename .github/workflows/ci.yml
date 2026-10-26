@@ -21,7 +21,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          enable-caching: true
+          enable-cache: true
 
       # 只装 ruff，不用同步 torch/chromadb 这些重依赖，几秒就能给出风格反馈
       - name: Ruff check
@@ -50,7 +50,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          enable-caching: true
+          enable-cache: true
 
       # 注意：依赖里有 torch（Linux 上会解析到较大的 wheel），同步可能要几分钟。
       # 用 --frozen 保证按 uv.lock 安装，不重新解析、不改镜像源。
