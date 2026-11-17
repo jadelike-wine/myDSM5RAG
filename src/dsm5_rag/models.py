@@ -5,9 +5,7 @@ from typing import Annotated, Any, Dict, List, Optional
 from pydantic import BaseModel, Field, StringConstraints
 
 # 单条提问的长度上限：防止一个请求就把 LLM 配额或网关打爆
-QuestionText = Annotated[
-    str, StringConstraints(min_length=1, max_length=4000)
-]
+QuestionText = Annotated[str, StringConstraints(min_length=1, max_length=4000)]
 
 
 class QueryRequest(BaseModel):
@@ -18,12 +16,8 @@ class QueryRequest(BaseModel):
         default="HYBRID",
         description="检索模式: HYBRID, VECTOR_ONLY, KEYWORD_ONLY, FUSION",
     )
-    similarity_top_k: int = Field(
-        default=5, ge=1, le=20, description="检索数量"
-    )
-    vector_weight: float = Field(
-        default=0.7, ge=0, le=1, description="向量权重（FUSION模式有效）"
-    )
+    similarity_top_k: int = Field(default=5, ge=1, le=20, description="检索数量")
+    vector_weight: float = Field(default=0.7, ge=0, le=1, description="向量权重（FUSION模式有效）")
     stream: bool = Field(default=False, description="是否流式输出")
     verbose: bool = Field(
         default=False,
@@ -69,9 +63,7 @@ class SystemStatus(BaseModel):
     index_stats: Optional[Dict[str, Any]] = Field(None, description="索引统计信息")
     uptime: Optional[float] = Field(None, description="运行时间（秒）")
     document_count: Optional[int] = Field(None, description="文档数量")
-    supported_formats: Optional[List[str]] = Field(
-        None, description="支持的文件格式"
-    )
+    supported_formats: Optional[List[str]] = Field(None, description="支持的文件格式")
 
 
 class IndexStatus(BaseModel):

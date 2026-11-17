@@ -109,9 +109,7 @@ async def lifespan(app: FastAPI):
 # ==================== FastAPI应用 ====================
 
 cors_origins = (
-    os.getenv("CORS_ORIGINS", "*").split(",")
-    if os.getenv("CORS_ORIGINS", "*") != "*"
-    else ["*"]
+    os.getenv("CORS_ORIGINS", "*").split(",") if os.getenv("CORS_ORIGINS", "*") != "*" else ["*"]
 )
 
 app = FastAPI(
@@ -134,7 +132,9 @@ def custom_openapi():
         routes=app.routes,
     )
     api_port = int(os.getenv("API_PORT", "8000"))
-    openapi_schema["servers"] = [{"url": f"http://localhost:{api_port}", "description": "本地服务器"}]
+    openapi_schema["servers"] = [
+        {"url": f"http://localhost:{api_port}", "description": "本地服务器"}
+    ]
     for path, path_item in openapi_schema["paths"].items():
         if "query" not in path:
             continue
@@ -235,16 +235,12 @@ async def get_index_diff():
         return JSONResponse(content=await rag_system.index_diff())
     except Exception as e:
         logger.error(f"获取索引差异失败: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"获取索引差异失败: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"获取索引差异失败: {str(e)}")
 
 
 @app.post("/index/rebuild", tags=["索引管理"])
 async def rebuild_index(
-    force: bool = Query(
-        default=False, description="是否强制重建（忽略文档未变化的判定）"
-    ),
+    force: bool = Query(default=False, description="是否强制重建（忽略文档未变化的判定）"),
     background: bool = Query(
         default=True,
         description="默认后台执行，立即返回并用 /index/status 轮询进度；"
@@ -301,9 +297,7 @@ async def list_documents():
 @app.post("/query", tags=["查询"])
 async def query_endpoint(
     request: QueryRequest,
-    format: str = Query(
-        "json", description="响应格式: json (默认), text (纯文本流)"
-    ),
+    format: str = Query("json", description="响应格式: json (默认), text (纯文本流)"),
 ):
     """执行查询"""
     if not rag_system:
@@ -311,13 +305,9 @@ async def query_endpoint(
 
     if not rag_system.index_built:
         if rag_system.index_building:
-            raise HTTPException(
-                status_code=425, detail="索引正在构建中，请稍后再试"
-            )
+            raise HTTPException(status_code=425, detail="索引正在构建中，请稍后再试")
         index_status = rag_system.get_index_status()
-        raise HTTPException(
-            status_code=503, detail=f"索引未就绪: {index_status.message}"
-        )
+        raise HTTPException(status_code=503, detail=f"索引未就绪: {index_status.message}")
 
     try:
         result = await rag_system.query(request)
@@ -368,9 +358,7 @@ async def query_endpoint(
                     + "\n"
                 )
 
-            return StreamingResponse(
-                default_stream(), media_type="application/x-ndjson"
-            )
+            return StreamingResponse(default_stream(), media_type="application/x-ndjson")
 
         return JSONResponse(content=result)
 
@@ -396,9 +384,7 @@ async def keyword_search_endpoint(request: KeywordSearchRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"关键词搜索失败: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"关键词搜索失败: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"关键词搜索失败: {str(e)}")
 
 
 @app.post("/query/batch", tags=["查询"])
@@ -416,9 +402,7 @@ async def batch_query_endpoint(request: BatchQueryRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"批量查询失败: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"批量查询失败: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"批量查询失败: {str(e)}")
 
 
 @app.post("/mode/change", tags=["配置"])
@@ -427,9 +411,7 @@ async def change_mode(
         ...,
         description="检索模式: HYBRID, VECTOR_ONLY, KEYWORD_ONLY, FUSION",
     ),
-    similarity_top_k: int = Query(
-        default=5, ge=1, le=20, description="检索数量"
-    ),
+    similarity_top_k: int = Query(default=5, ge=1, le=20, description="检索数量"),
     vector_weight: float = Query(
         default=0.7,
         ge=0,
@@ -445,12 +427,10 @@ async def change_mode(
         if mode not in ["HYBRID", "VECTOR_ONLY", "KEYWORD_ONLY", "FUSION"]:
             raise HTTPException(status_code=400, detail="无效的检索模式")
 
-        current_mode, current_top_k, current_weight = (
-            rag_system.set_default_search_params(
-                mode=mode,
-                similarity_top_k=similarity_top_k,
-                vector_weight=vector_weight,
-            )
+        current_mode, current_top_k, current_weight = rag_system.set_default_search_params(
+            mode=mode,
+            similarity_top_k=similarity_top_k,
+            vector_weight=vector_weight,
         )
 
         return JSONResponse(
@@ -459,9 +439,7 @@ async def change_mode(
                 "message": f"检索模式已更改为 {current_mode}",
                 "mode": current_mode,
                 "similarity_top_k": current_top_k,
-                "vector_weight": (
-                    current_weight if current_mode == "FUSION" else None
-                ),
+                "vector_weight": (current_weight if current_mode == "FUSION" else None),
                 "timestamp": datetime.now().isoformat(),
             }
         )
@@ -471,9 +449,7 @@ async def change_mode(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"模式更改失败: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"模式更改失败: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"模式更改失败: {str(e)}")
 
 
 # ==================== 错误处理 ====================

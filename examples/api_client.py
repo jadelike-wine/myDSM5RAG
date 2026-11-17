@@ -123,6 +123,7 @@ async def change_mode(client: httpx.AsyncClient, mode: str) -> dict:
     print(f"  模式: {data['mode']}, 状态: {data['status']}")
     return data
 
+
 # ============================================================
 
 
@@ -168,10 +169,13 @@ async def main():
 
         # 6. 批量查询
         print("\n[6/7] 批量查询")
-        await batch_query(client, [
-            "What is Major Depressive Disorder?",
-            "广泛性焦虑障碍的症状有哪些？",
-        ])
+        await batch_query(
+            client,
+            [
+                "What is Major Depressive Disorder?",
+                "广泛性焦虑障碍的症状有哪些？",
+            ],
+        )
 
         # 7. 切换检索模式
         print("\n[7/7] 切换检索模式")

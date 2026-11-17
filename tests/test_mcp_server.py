@@ -83,9 +83,9 @@ async def test_build_index_tool_has_params():
 
 def _tool_text(result) -> str:
     blocks = getattr(result, "content", None) or []
-    return "\n".join(
-        getattr(block, "text", str(block)) for block in blocks
-    ) or str(getattr(result, "data", result))
+    return "\n".join(getattr(block, "text", str(block)) for block in blocks) or str(
+        getattr(result, "data", result)
+    )
 
 
 @pytest.fixture(scope="module")
@@ -131,7 +131,11 @@ class TestToolBehaviour:
     async def test_hybrid_search_tags_retrieval_types(self, client):
         text = await client(
             "search",
-            {"question": "diagnostic criteria for Major Depressive Disorder", "mode": "HYBRID", "top_k": 5},
+            {
+                "question": "diagnostic criteria for Major Depressive Disorder",
+                "mode": "HYBRID",
+                "top_k": 5,
+            },
         )
         assert "[keyword]" in text or "[both]" in text
 

@@ -252,9 +252,7 @@ class DeepSeekRAGSystem:
             keyword_index_path = self.persist_dir / "keyword_index"
             keyword_index = BM25KeywordIndex.load_or_migrate(keyword_index_path)
             if keyword_index is None:
-                raise ValueError(
-                    f"关键词索引缺失或格式过旧: {keyword_index_path}"
-                )
+                raise ValueError(f"关键词索引缺失或格式过旧: {keyword_index_path}")
             self.keyword_index = keyword_index
 
             self.index_built = True
@@ -295,31 +293,21 @@ class DeepSeekRAGSystem:
                 # 关键：重新扫描，否则放进来的新文件永远发现不了
                 self._scan_document_files()
                 if not self.document_files:
-                    raise FileNotFoundError(
-                        f"未找到支持的文档文件: {self.documents_path}"
-                    )
+                    raise FileNotFoundError(f"未找到支持的文档文件: {self.documents_path}")
 
-                current_files = await run_in_executor(
-                    describe_files, self.document_files
-                )
+                current_files = await run_in_executor(describe_files, self.document_files)
                 signature = IndexManifest.build_config_signature(self.config)
 
                 vector_index_path = self.persist_dir / "vector_index"
                 keyword_index_path = self.persist_dir / "keyword_index"
 
-                if (
-                    vector_index_path.exists()
-                    and keyword_index_path.exists()
-                    and not force_rebuild
-                ):
+                if vector_index_path.exists() and keyword_index_path.exists() and not force_rebuild:
                     manifest = IndexManifest.load(self.persist_dir)
                     if manifest is None:
                         logger.info("索引已存在但缺少清单，需要重建以建立基线")
                         needs_rebuild, reasons = True, {"reason": "缺少索引清单"}
                     else:
-                        needs_rebuild, reasons = manifest.needs_rebuild(
-                            current_files, signature
-                        )
+                        needs_rebuild, reasons = manifest.needs_rebuild(current_files, signature)
                     if not needs_rebuild:
                         logger.info("文档与配置均未变化，直接加载现有索引")
                         await self._load_existing_index()
@@ -329,9 +317,7 @@ class DeepSeekRAGSystem:
                             "documents": len(current_files),
                             "file_count": len(current_files),
                             "document_path": str(self.documents_path),
-                            "manifest_updated_at": manifest.updated_at
-                            if manifest
-                            else None,
+                            "manifest_updated_at": manifest.updated_at if manifest else None,
                         }
                     logger.info("检测到需要重建索引的原因: %s", reasons)
                     rebuild_reasons = reasons
@@ -342,9 +328,7 @@ class DeepSeekRAGSystem:
                 # 避免把陈旧向量留在库里。
                 self._reset_index_dirs(vector_index_path, keyword_index_path)
 
-                logger.info(
-                    f"开始构建索引，共 {len(self.document_files)} 个文档文件"
-                )
+                logger.info(f"开始构建索引，共 {len(self.document_files)} 个文档文件")
 
                 logger.info("重新构建索引...")
                 self.index_build_progress = 0.1
@@ -363,9 +347,7 @@ class DeepSeekRAGSystem:
 
                 self.index_build_progress = 0.8
                 logger.info("构建 BM25 关键词索引...")
-                keyword_index = await run_in_executor(
-                    self._build_keyword_index, nodes
-                )
+                keyword_index = await run_in_executor(self._build_keyword_index, nodes)
                 self.keyword_index = keyword_index
                 await run_in_executor(keyword_index.persist, keyword_index_path)
 
@@ -418,8 +400,7 @@ class DeepSeekRAGSystem:
             )
 
             batch_tasks = [
-                loop.run_in_executor(executor, self._sync_parse_document, fp)
-                for fp in batch_files
+                loop.run_in_executor(executor, self._sync_parse_document, fp) for fp in batch_files
             ]
             batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
 
@@ -430,9 +411,7 @@ class DeepSeekRAGSystem:
                 elif result:
                     all_documents.extend(result)
 
-            self.index_build_progress = 0.1 + 0.2 * (
-                min(i + batch_size, total_files) / total_files
-            )
+            self.index_build_progress = 0.1 + 0.2 * (min(i + batch_size, total_files) / total_files)
 
         logger.info(f"解析完成，共 {len(all_documents)} 个文档块")
         return all_documents
@@ -448,13 +427,9 @@ class DeepSeekRAGSystem:
         logger.info(f"生成 {len(nodes)} 个文本节点")
         return nodes
 
-    def _build_vector_index(
-        self, nodes: List[Any], persist_path: Path
-    ) -> VectorStoreIndex:
+    def _build_vector_index(self, nodes: List[Any], persist_path: Path) -> VectorStoreIndex:
         """构建并持久化向量索引（embedding 是同步重活，必须在子线程里跑）。"""
-        vector_storage_context = StorageContext.from_defaults(
-            vector_store=self.vector_store
-        )
+        vector_storage_context = StorageContext.from_defaults(vector_store=self.vector_store)
         index = VectorStoreIndex(
             nodes=nodes,
             storage_context=vector_storage_context,
@@ -533,14 +508,8 @@ class DeepSeekRAGSystem:
         explicit = getattr(request, "model_fields_set", set()) or set()
         return self._normalize_search_params(
             mode=request.mode if "mode" in explicit else None,
-            similarity_top_k=(
-                request.similarity_top_k
-                if "similarity_top_k" in explicit
-                else None
-            ),
-            vector_weight=(
-                request.vector_weight if "vector_weight" in explicit else None
-            ),
+            similarity_top_k=(request.similarity_top_k if "similarity_top_k" in explicit else None),
+            vector_weight=(request.vector_weight if "vector_weight" in explicit else None),
         )
 
     def set_default_search_params(
@@ -553,9 +522,7 @@ class DeepSeekRAGSystem:
         if mode is not None:
             mode = mode.upper()
             if mode not in VALID_MODES:
-                raise ValueError(
-                    f"无效的检索模式: {mode}，可选: {', '.join(VALID_MODES)}"
-                )
+                raise ValueError(f"无效的检索模式: {mode}，可选: {', '.join(VALID_MODES)}")
             self.default_mode = mode
         if similarity_top_k is not None:
             top_k = int(similarity_top_k)
@@ -583,12 +550,8 @@ class DeepSeekRAGSystem:
         只有轻量包装对象是每次新建的（向量/BM25 索引本身常驻内存），
         这样每个请求都用自己那份检索器，并发请求之间不会互相污染。
         """
-        vector_retriever = self.vector_index.as_retriever(
-            similarity_top_k=similarity_top_k
-        )
-        keyword_retriever = self.keyword_index.as_retriever(
-            similarity_top_k=similarity_top_k
-        )
+        vector_retriever = self.vector_index.as_retriever(similarity_top_k=similarity_top_k)
+        keyword_retriever = self.keyword_index.as_retriever(similarity_top_k=similarity_top_k)
         return HybridRetriever(
             vector_retriever=vector_retriever,
             keyword_retriever=keyword_retriever,
@@ -673,15 +636,10 @@ class DeepSeekRAGSystem:
     def _filter_by_cutoff(self, nodes: List[Any]) -> tuple[List[Any], int]:
         """按配置的相似度阈值过滤，返回(保留的节点, 被过滤掉的数量)。"""
         cutoff = self.config.similarity_cutoff
-        kept = [
-            node for node in nodes
-            if node.score is not None and node.score >= cutoff
-        ]
+        kept = [node for node in nodes if node.score is not None and node.score >= cutoff]
         return kept, len(nodes) - len(kept)
 
-    async def query(
-        self, request: QueryRequest, verbose: bool | None = None
-    ) -> Dict[str, Any]:
+    async def query(self, request: QueryRequest, verbose: bool | None = None) -> Dict[str, Any]:
         """执行查询。
 
         引擎按 (mode, top_k, vector_weight) 现场组装，请求之间不共享任何可变状态。
@@ -692,9 +650,7 @@ class DeepSeekRAGSystem:
         mode, top_k, weight = self.params_from_request(request)
         include_full = request.verbose if verbose is None else bool(verbose)
 
-        logger.info(
-            f"查询问题: {request.question[:50]}... (模式: {mode}, top_k: {top_k})"
-        )
+        logger.info(f"查询问题: {request.question[:50]}... (模式: {mode}, top_k: {top_k})")
 
         if request.stream:
             return await self._stream_query(request, verbose=include_full)
@@ -736,9 +692,7 @@ class DeepSeekRAGSystem:
             if sources:
                 result["sources"] = sources
                 result["retrieval_stats"] = retrieval_stats
-                result["sources_limited"] = (
-                    f"显示前{len(sources)}个来源（共{len(source_nodes)}个）"
-                )
+                result["sources_limited"] = f"显示前{len(sources)}个来源（共{len(source_nodes)}个）"
 
             logger.info(
                 "查询完成，返回 %d 个来源，检索 %.1fms / 生成 %.1fms",
@@ -781,14 +735,10 @@ class DeepSeekRAGSystem:
             parts.append(text)
             used += len(text)
         if dropped:
-            logger.warning(
-                "上下文超出 %d 字符，已丢弃末尾 %d 个节点", limit, dropped
-            )
+            logger.warning("上下文超出 %d 字符，已丢弃末尾 %d 个节点", limit, dropped)
         return "\n\n".join(parts)
 
-    async def _astream_answer(
-        self, question: str, nodes: List[Any]
-    ) -> AsyncGenerator[str, None]:
+    async def _astream_answer(self, question: str, nodes: List[Any]) -> AsyncGenerator[str, None]:
         """直接走 LLM 的异步流式接口逐 token 产出答案。
 
         为什么要自己拼提示词：llama-index-core 0.14.23 的 refine/compact 合成器在
@@ -823,9 +773,7 @@ class DeepSeekRAGSystem:
                 if delta:
                     yield delta
 
-    async def _stream_query(
-        self, request: QueryRequest, verbose: bool = False
-    ) -> Dict[str, Any]:
+    async def _stream_query(self, request: QueryRequest, verbose: bool = False) -> Dict[str, Any]:
         """真流式查询：NDJSON，每行一个事件。
 
         事件顺序：
@@ -895,9 +843,7 @@ class DeepSeekRAGSystem:
                         streamed = True
                         yield await emit(token)
                 except Exception as stream_error:
-                    logger.warning(
-                        "token 级流式生成失败，回退到一次性生成: %s", stream_error
-                    )
+                    logger.warning("token 级流式生成失败，回退到一次性生成: %s", stream_error)
 
                 if not streamed:
                     # 兜底：LLM 不支持 astream 时，用合成器整段生成
@@ -994,9 +940,7 @@ class DeepSeekRAGSystem:
             "timestamp": datetime.now().isoformat(),
         }
 
-    async def batch_query(
-        self, request: BatchQueryRequest
-    ) -> Dict[str, Any]:
+    async def batch_query(self, request: BatchQueryRequest) -> Dict[str, Any]:
         """批量查询：受 Semaphore 并发上限约束，结果顺序与输入一致。"""
         if not self.index_built:
             raise ValueError("索引未构建，请先构建索引")
@@ -1032,9 +976,7 @@ class DeepSeekRAGSystem:
                     payload["error"] = result["error"]
                 return payload
 
-        results = list(
-            await asyncio.gather(*(run_one(q) for q in request.questions))
-        )
+        results = list(await asyncio.gather(*(run_one(q) for q in request.questions)))
 
         return {
             "mode": mode,
@@ -1055,9 +997,7 @@ class DeepSeekRAGSystem:
                 index_stats = {
                     "vector_index_type": type(self.vector_index).__name__,
                     "keyword_index_type": (
-                        type(self.keyword_index).__name__
-                        if self.keyword_index
-                        else None
+                        type(self.keyword_index).__name__ if self.keyword_index else None
                     ),
                     "keyword_index_nodes": (
                         self.keyword_index.node_count if self.keyword_index else 0
@@ -1094,9 +1034,7 @@ class DeepSeekRAGSystem:
                 details={
                     "progress_percentage": round(self.index_build_progress * 100, 1),
                     "document_count": self.total_documents,
-                    "files_processed": int(
-                        self.index_build_progress * self.total_documents
-                    ),
+                    "files_processed": int(self.index_build_progress * self.total_documents),
                 },
             )
         if self.index_built:

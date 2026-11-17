@@ -44,9 +44,7 @@ class DocumentParser:
                         )
                         documents.append(doc)
 
-            logger.info(
-                f"PDF文件解析完成: {file_path.name}, 共{num_pages}页"
-            )
+            logger.info(f"PDF文件解析完成: {file_path.name}, 共{num_pages}页")
             return documents
 
         except Exception as e:
@@ -94,9 +92,7 @@ class DocumentParser:
                 )
                 documents.append(doc_obj)
 
-            logger.info(
-                f"DOCX文件解析完成: {file_path.name}, 生成{len(documents)}个文档"
-            )
+            logger.info(f"DOCX文件解析完成: {file_path.name}, 生成{len(documents)}个文档")
             return documents
 
         except Exception as e:
@@ -122,9 +118,7 @@ class DocumentParser:
                 )
                 documents.append(doc)
 
-            logger.info(
-                f"TXT文件解析完成: {file_path.name}, 生成{len(documents)}个文档"
-            )
+            logger.info(f"TXT文件解析完成: {file_path.name}, 生成{len(documents)}个文档")
             return documents
 
         except Exception as e:

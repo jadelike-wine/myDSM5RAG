@@ -94,9 +94,7 @@ class TestKeywordChannel:
         assert "mdd_major_dep.txt" in file_names(nodes)
 
     async def test_keyword_search_endpoint_shape(self, system):
-        result = await system.keyword_search(
-            KeywordSearchRequest(keyword="296.3x", top_k=20)
-        )
+        result = await system.keyword_search(KeywordSearchRequest(keyword="296.3x", top_k=20))
         assert result["count"] <= system.config.max_sources
         assert result["total_matched"] >= result["count"]
         assert result["similarity_cutoff"] == system.config.similarity_cutoff
@@ -208,8 +206,6 @@ class TestReloadFromDisk:
 
         assert fresh.index_built is True
         assert isinstance(fresh.keyword_index, BM25KeywordIndex)
-        nodes = fresh.keyword_index.as_retriever(similarity_top_k=2).retrieve(
-            QueryBundle("296.3x")
-        )
+        nodes = fresh.keyword_index.as_retriever(similarity_top_k=2).retrieve(QueryBundle("296.3x"))
         assert nodes and all(n.score is not None for n in nodes)
         assert "mdd_major_dep.txt" in file_names(nodes)

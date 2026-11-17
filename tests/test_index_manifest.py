@@ -55,9 +55,7 @@ class TestDiffAndRebuildDecision:
         _directory, files = docs
         current = describe_files(files)
         config = {"chunk_size": 1024, "bm25_language": "en"}
-        manifest = IndexManifest(
-            persist_dir=_directory, files=current, build_config=config
-        )
+        manifest = IndexManifest(persist_dir=_directory, files=current, build_config=config)
         needs, reasons = manifest.needs_rebuild(current, config)
         assert needs is False
         assert reasons == {}
@@ -171,9 +169,17 @@ class TestStatusOf:
 
     def test_with_manifest_and_pending_change(self, docs):
         directory, files = docs
-        config = type("C", (), {"chunk_size": 1024, "chunk_overlap": 100,
-                                "bm25_language": "en", "bm25_skip_stemming": False,
-                                "embedding_model": "m"})()
+        config = type(
+            "C",
+            (),
+            {
+                "chunk_size": 1024,
+                "chunk_overlap": 100,
+                "bm25_language": "en",
+                "bm25_skip_stemming": False,
+                "embedding_model": "m",
+            },
+        )()
         IndexManifest(
             persist_dir=directory,
             files=describe_files(files),

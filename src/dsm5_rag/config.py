@@ -17,9 +17,7 @@ class RagConfig:
 
         # =============== DeepSeek API配置 ===============
         self.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "")
-        self.deepseek_base_url = os.getenv(
-            "DEEPSEEK_BASE_URL", "https://api.deepseek.com"
-        )
+        self.deepseek_base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
         self.deepseek_model = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
 
         # =============== Embedding配置 ===============
@@ -45,9 +43,7 @@ class RagConfig:
         # 关键词通道的停用词语言（bm25s 内置 en/de/nl/fr/es/pt/it/ru/sv/no/zh/tr/ko/da）
         self.bm25_language = os.getenv("BM25_LANGUAGE", "en")
         # 关闭词干化可让 "disorders"/"disorder" 严格区分，默认开启词干化
-        self.bm25_skip_stemming = (
-            os.getenv("BM25_SKIP_STEMMING", "false").lower() == "true"
-        )
+        self.bm25_skip_stemming = os.getenv("BM25_SKIP_STEMMING", "false").lower() == "true"
 
         # =============== HuggingFace镜像站配置 ===============
         self.hf_endpoint = os.getenv("HF_ENDPOINT", "https://hf-mirror.com")
@@ -63,14 +59,10 @@ class RagConfig:
 
         # =============== 优化配置 ===============
         self.similarity_cutoff = float(os.getenv("SIMILARITY_CUTOFF", "0.2"))
-        self.enable_context_reorder = (
-            os.getenv("ENABLE_CONTEXT_REORDER", "true").lower() == "true"
-        )
+        self.enable_context_reorder = os.getenv("ENABLE_CONTEXT_REORDER", "true").lower() == "true"
         self.max_sources = int(os.getenv("MAX_SOURCES", "3"))
         # 流式回答时拼进提示词的上下文长度上限（字符数，超出后从尾部丢弃节点）
-        self.stream_context_char_limit = int(
-            os.getenv("STREAM_CONTEXT_CHAR_LIMIT", "24000")
-        )
+        self.stream_context_char_limit = int(os.getenv("STREAM_CONTEXT_CHAR_LIMIT", "24000"))
         # 批量查询的单请求并发上限（asyncio.Semaphore）
         self.batch_concurrency = int(os.getenv("BATCH_CONCURRENCY", "4"))
 

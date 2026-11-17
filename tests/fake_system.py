@@ -159,13 +159,9 @@ class FakeRAGSystem:
                     "timestamp": datetime.now().isoformat(),
                 }
             )
-            yield ndjson(
-                {"event": "retrieval_completed", "count": 2, "retrieval_ms": 40.5}
-            )
+            yield ndjson({"event": "retrieval_completed", "count": 2, "retrieval_ms": 40.5})
             for chunk in self.stream_chunks:
-                yield ndjson(
-                    {"event": "answer_chunk", "chunk": chunk, "is_complete": False}
-                )
+                yield ndjson({"event": "answer_chunk", "chunk": chunk, "is_complete": False})
             yield ndjson(
                 {
                     "event": "answer_chunk",
@@ -207,9 +203,7 @@ class FakeRAGSystem:
             "media_type": "application/x-ndjson",
         }
 
-    async def keyword_search(
-        self, request, verbose: bool | None = None
-    ) -> Dict[str, Any]:
+    async def keyword_search(self, request, verbose: bool | None = None) -> Dict[str, Any]:
         include_full = request.verbose if verbose is None else bool(verbose)
         item = {
             "rank": 1,
@@ -238,8 +232,7 @@ class FakeRAGSystem:
         return {
             "mode": request.mode,
             "results": [
-                {"question": q, "answer": f"回答：{q}", "success": True}
-                for q in request.questions
+                {"question": q, "answer": f"回答：{q}", "success": True} for q in request.questions
             ],
             "total": len(request.questions),
             "successful": len(request.questions),

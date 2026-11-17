@@ -32,9 +32,7 @@ from dsm5_rag.background import run_in_executor
 VALID_MODES = ("VECTOR_ONLY", "KEYWORD_ONLY", "HYBRID", "FUSION")
 
 
-def resolve_top_k(
-    explicit: Optional[int], *retrievers: object
-) -> int:
+def resolve_top_k(explicit: Optional[int], *retrievers: object) -> int:
     """确定融合后返回的条数：显式参数 > 子检索器 > 全局默认。"""
     if isinstance(explicit, int) and explicit > 0:
         return explicit
@@ -107,9 +105,7 @@ class _ChannelRetriever(BaseRetriever):
 
     async def _aretrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
         if self._offload_sync:
-            return self._record(
-                await run_in_executor(self._retriever.retrieve, query_bundle)
-            )
+            return self._record(await run_in_executor(self._retriever.retrieve, query_bundle))
         return self._record(await self._retriever.aretrieve(query_bundle))
 
 
@@ -129,9 +125,7 @@ class HybridRetriever(BaseRetriever):
         similarity_top_k: Optional[int] = None,
     ):
         if mode not in VALID_MODES:
-            raise ValueError(
-                f"无效的检索模式: {mode}，可选: {', '.join(VALID_MODES)}"
-            )
+            raise ValueError(f"无效的检索模式: {mode}，可选: {', '.join(VALID_MODES)}")
 
         self._vector_retriever = vector_retriever
         self._keyword_retriever = keyword_retriever
@@ -142,14 +136,10 @@ class HybridRetriever(BaseRetriever):
         )
         super().__init__()
 
-        self._vector_channel = _ChannelRetriever(
-            vector_retriever, "vector", offload_sync=True
-        )
+        self._vector_channel = _ChannelRetriever(vector_retriever, "vector", offload_sync=True)
         # 关键词通道（KeywordRetriever）自己已经把 BM25 打分放在线程池里，
         # 这里不能再 offload，否则会在线程里再次取事件循环而报错。
-        self._keyword_channel = _ChannelRetriever(
-            keyword_retriever, "keyword", offload_sync=False
-        )
+        self._keyword_channel = _ChannelRetriever(keyword_retriever, "keyword", offload_sync=False)
         self._fusion_retriever = self._build_fusion_retriever()
 
     # ------------------------------------------------------------------
@@ -244,9 +234,7 @@ class HybridRetriever(BaseRetriever):
         """执行混合检索。"""
         channel = self._active_channel
         if channel is not None:
-            return self._tag_single_channel(
-                channel.retrieve(query_bundle), channel.retrieval_type
-            )
+            return self._tag_single_channel(channel.retrieve(query_bundle), channel.retrieval_type)
 
         self._vector_channel.reset()
         self._keyword_channel.reset()

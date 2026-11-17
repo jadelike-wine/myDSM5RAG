@@ -99,9 +99,7 @@ class TestHealthAndStatus:
         assert data["index_stats"]["keyword_index_type"] == "BM25KeywordIndex"
         assert data["supported_formats"] == [".pdf", ".docx", ".txt"]
 
-    @pytest.mark.parametrize(
-        "path", ["/status", "/index/status", "/documents", "/index/diff"]
-    )
+    @pytest.mark.parametrize("path", ["/status", "/index/status", "/documents", "/index/diff"])
     def test_status_endpoints_503_when_uninitialized(self, uninit_client, path):
         response = uninit_client.get(path)
         assert response.status_code == 503
@@ -226,9 +224,7 @@ class TestStreamingContract:
     def _lines(self, client, payload):
         with client.stream("POST", "/query", json=payload) as response:
             assert response.status_code == 200
-            assert response.headers["content-type"].startswith(
-                "application/x-ndjson"
-            )
+            assert response.headers["content-type"].startswith("application/x-ndjson")
             raw = response.read().decode("utf-8")
         return raw
 
@@ -290,17 +286,13 @@ class TestKeywordSearchEndpoint:
         assert any(r["full_text"] for r in data["results"])
 
     def test_503_when_index_missing(self, uninit_client):
-        assert uninit_client.post(
-            "/search/keyword", json={"keyword": "x"}
-        ).status_code == 503
+        assert uninit_client.post("/search/keyword", json={"keyword": "x"}).status_code == 503
 
     def test_422_on_empty_keyword(self, client):
         assert client.post("/search/keyword", json={"keyword": ""}).status_code == 422
 
     def test_422_on_top_k_out_of_range(self, client):
-        assert client.post(
-            "/search/keyword", json={"keyword": "x", "top_k": 99}
-        ).status_code == 422
+        assert client.post("/search/keyword", json={"keyword": "x", "top_k": 99}).status_code == 422
 
 
 class TestBatchQueryEndpoint:
@@ -325,9 +317,7 @@ class TestBatchQueryEndpoint:
         assert client.post("/query/batch", json=payload).status_code == 422
 
     def test_503_when_uninitialized(self, uninit_client):
-        assert uninit_client.post(
-            "/query/batch", json={"questions": ["a"]}
-        ).status_code == 503
+        assert uninit_client.post("/query/batch", json={"questions": ["a"]}).status_code == 503
 
 
 class TestModeAndIndexEndpoints:

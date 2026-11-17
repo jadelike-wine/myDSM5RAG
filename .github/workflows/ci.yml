@@ -28,7 +28,7 @@ jobs:
         run: uvx ruff@0.16.9 check src tests scripts
 
       - name: Ruff format check（只检查不改写）
-        run: uvx ruff@0.16.9 format --check src/dsm5_rag/background.py src/dsm5_rag/keyword_index.py src/dsm5_rag/index_manifest.py
+        run: uvx ruff@0.16.9 format --check .
 
   test:
     name: Test (python ${{ matrix.python-version }})

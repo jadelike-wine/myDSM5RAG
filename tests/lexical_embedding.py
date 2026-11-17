@@ -91,9 +91,7 @@ def install_fake_huggingface_embedding(embed_dim: int = 256) -> type:
             return "FakeHuggingFaceEmbedding"
 
     module_name = "llama_index.embeddings.huggingface"
-    if module_name not in sys.modules or not hasattr(
-        sys.modules[module_name], "_is_test_stub"
-    ):
+    if module_name not in sys.modules or not hasattr(sys.modules[module_name], "_is_test_stub"):
         module = types.ModuleType(module_name)
         module.HuggingFaceEmbedding = _FakeHuggingFaceEmbedding
         module._is_test_stub = True

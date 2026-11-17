@@ -72,9 +72,7 @@ class TestBatchQueryRequest:
 
     def test_custom_mode(self):
         """测试自定义模式"""
-        req = BatchQueryRequest(
-            questions=["问题1"], mode="VECTOR_ONLY"
-        )
+        req = BatchQueryRequest(questions=["问题1"], mode="VECTOR_ONLY")
         assert req.mode == "VECTOR_ONLY"
 
 

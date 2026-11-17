@@ -74,9 +74,7 @@ class TestKeywordRetrievalIsQueryAware:
             assert len(nodes) <= top_k
 
     def test_does_not_return_whole_corpus(self, keyword_index):
-        nodes = keyword_index.as_retriever(similarity_top_k=1).retrieve(
-            QueryBundle("296.3x")
-        )
+        nodes = keyword_index.as_retriever(similarity_top_k=1).retrieve(QueryBundle("296.3x"))
         assert 0 < len(nodes) < keyword_index.node_count
 
     def test_irrelevant_query_returns_nothing(self, keyword_index):
@@ -108,17 +106,13 @@ class TestKeywordRecall:
         ],
     )
     def test_top_hit_is_the_right_document(self, keyword_index, query, expected_file):
-        nodes = keyword_index.as_retriever(similarity_top_k=3).retrieve(
-            QueryBundle(query)
-        )
+        nodes = keyword_index.as_retriever(similarity_top_k=3).retrieve(QueryBundle(query))
         assert nodes, f"查询 {query!r} 没有命中任何节点"
         assert nodes[0].node.metadata["file_name"] == expected_file
 
     def test_chinese_term_matches(self, keyword_index):
         """中文术语（与英文混排在同一节点里）也应命中。"""
-        nodes = keyword_index.as_retriever(similarity_top_k=2).retrieve(
-            QueryBundle("快感缺失")
-        )
+        nodes = keyword_index.as_retriever(similarity_top_k=2).retrieve(QueryBundle("快感缺失"))
         assert "mdd_major_dep.txt" in file_names(nodes)
 
 
@@ -169,9 +163,7 @@ class TestLeafNodeFiltering:
 
         parent = TextNode(text="parent text", id_="p")
         child = TextNode(text="child text", id_="c")
-        parent.relationships[NodeRelationship.CHILD] = [
-            RelatedNodeInfo(node_id=child.node_id)
-        ]
+        parent.relationships[NodeRelationship.CHILD] = [RelatedNodeInfo(node_id=child.node_id)]
         assert [n.node_id for n in leaf_nodes([parent, child])] == ["c"]
 
     def test_fallback_when_no_hierarchy(self, corpus_nodes):
@@ -191,17 +183,13 @@ class TestPersistence:
         original = keyword_index.as_retriever(similarity_top_k=2).retrieve(query)
         restored = reloaded.as_retriever(similarity_top_k=2).retrieve(query)
         assert file_names(original) == file_names(restored)
-        assert [round(n.score, 6) for n in original] == [
-            round(n.score, 6) for n in restored
-        ]
+        assert [round(n.score, 6) for n in original] == [round(n.score, 6) for n in restored]
 
     def test_metadata_and_text_survive_reload(self, keyword_index, tmp_path):
         persist_dir = tmp_path / "keyword_index"
         keyword_index.persist(persist_dir)
         reloaded = BM25KeywordIndex.from_persist_dir(persist_dir)
-        nodes = reloaded.as_retriever(similarity_top_k=1).retrieve(
-            QueryBundle("296.3x")
-        )
+        nodes = reloaded.as_retriever(similarity_top_k=1).retrieve(QueryBundle("296.3x"))
         assert nodes[0].node.metadata["file_name"] == "mdd_major_dep.txt"
         assert "Major Depressive Disorder" in nodes[0].node.text
 
@@ -224,9 +212,7 @@ class TestPersistence:
         migrated = BM25KeywordIndex.load_or_migrate(persist_dir)
         assert migrated is not None
         assert BM25KeywordIndex.is_persisted(persist_dir)
-        nodes = migrated.as_retriever(similarity_top_k=2).retrieve(
-            QueryBundle("296.3x")
-        )
+        nodes = migrated.as_retriever(similarity_top_k=2).retrieve(QueryBundle("296.3x"))
         assert nodes and nodes[0].node.metadata["file_name"] == "mdd_major_dep.txt"
 
     def test_corrupted_dir_returns_none(self, tmp_path):

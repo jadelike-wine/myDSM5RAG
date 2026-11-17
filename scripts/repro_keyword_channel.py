@@ -21,9 +21,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CORPUS = Path(
-    sys.argv[1] if len(sys.argv) > 1 else ROOT / "tests" / "fixtures" / "corpus"
-)
+CORPUS = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "tests" / "fixtures" / "corpus")
 TMP = Path(tempfile.mkdtemp(prefix="dsm5-repro-"))
 
 # --- 环境隔离：必须在 import dsm5_rag 之前设置 -------------------------------
@@ -97,13 +95,16 @@ async def main() -> int:
     scores = [n.score for n in kw_nodes_out]
     print(f"返回节点数 = {len(kw_nodes_out)}")
     print(f"scores = {scores}")
-    check("KEYWORD_ONLY 未返回全部节点", len(kw_nodes_out) < total_nodes,
-          f"{len(kw_nodes_out)} < 全部 {total_nodes}")
-    check("KEYWORD_ONLY 条数 <= top_k", len(kw_nodes_out) <= TOP_K, f"{len(kw_nodes_out)} <= {TOP_K}")
+    check(
+        "KEYWORD_ONLY 未返回全部节点",
+        len(kw_nodes_out) < total_nodes,
+        f"{len(kw_nodes_out)} < 全部 {total_nodes}",
+    )
+    check(
+        "KEYWORD_ONLY 条数 <= top_k", len(kw_nodes_out) <= TOP_K, f"{len(kw_nodes_out)} <= {TOP_K}"
+    )
     check("KEYWORD_ONLY score 不为 None", all(s is not None for s in scores))
-    check("KEYWORD_ONLY score 落在 0~1", all(
-        s is not None and 0.0 <= s <= 1.0 for s in scores
-    ))
+    check("KEYWORD_ONLY score 落在 0~1", all(s is not None and 0.0 <= s <= 1.0 for s in scores))
     hit_code = any(
         "Major Depressive Disorder" in n.node.text
         for n in keyword_retriever.retrieve(QueryBundle(CODE_QUERY))
@@ -117,9 +118,7 @@ async def main() -> int:
 
     # ---- 2. HYBRID：关键词通道对最终上下文有没有贡献？ --------------------
     hr("[2] HYBRID 融合 + SimilarityPostprocessor(cutoff=0.2)")
-    hybrid_kw_retriever = system.keyword_index.as_retriever(
-        similarity_top_k=HYBRID_TOP_K
-    )
+    hybrid_kw_retriever = system.keyword_index.as_retriever(similarity_top_k=HYBRID_TOP_K)
     vector_retriever = system.vector_index.as_retriever(similarity_top_k=HYBRID_TOP_K)
     hybrid = HybridRetriever(
         vector_retriever=vector_retriever,
@@ -156,9 +155,10 @@ async def main() -> int:
     fused = fusion.retrieve(QueryBundle(QUERY))
     print(f"FUSION 返回 = {len(fused)} 条")
     print(f"scores = {[None if n.score is None else round(n.score, 4) for n in fused]}")
-    check("FUSION score 不为 None 且 <= 1", bool(fused) and all(
-        n.score is not None and 0.0 <= n.score <= 1.0 for n in fused
-    ))
+    check(
+        "FUSION score 不为 None 且 <= 1",
+        bool(fused) and all(n.score is not None and 0.0 <= n.score <= 1.0 for n in fused),
+    )
     check("FUSION 条数 <= top_k", len(fused) <= HYBRID_TOP_K, f"{len(fused)} <= {HYBRID_TOP_K}")
 
     # ---- 4. MCP 展示层：KEYWORD_ONLY 的结果能不能显示出来？ ----------------
@@ -177,24 +177,24 @@ async def main() -> int:
         from fastmcp import Client  # noqa: E402
 
         async with Client(mcp_server.mcp) as client:
-            call_res = await client.call_tool("search", {
-                "question": CODE_QUERY, "mode": "KEYWORD_ONLY", "top_k": 3
-            })
+            call_res = await client.call_tool(
+                "search", {"question": CODE_QUERY, "mode": "KEYWORD_ONLY", "top_k": 3}
+            )
         text = "\n".join(
-            getattr(block, "text", str(block))
-            for block in getattr(call_res, "content", [call_res])
+            getattr(block, "text", str(block)) for block in getattr(call_res, "content", [call_res])
         )
     except Exception as e:
         text = f"(无法通过 fastmcp Client 调用工具: {type(e).__name__}: {e})"
     print(text[:700] + ("..." if len(text) > 700 else ""))
-    check("MCP KEYWORD_ONLY 不返回『低于阈值』空结果", "低于相似度阈值" not in text and not text.startswith("("))
+    check(
+        "MCP KEYWORD_ONLY 不返回『低于阈值』空结果",
+        "低于相似度阈值" not in text and not text.startswith("("),
+    )
 
     # ---- 6. /search/keyword：有没有截断？倒出多少全文？ --------------------
     hr("[6] system.keyword_search（HTTP /search/keyword 的实现）")
     res = await system.keyword_search(KeywordSearchRequest(keyword=CODE_QUERY, top_k=TOP_K))
-    full_chars = sum(
-        len(r["full_text"]) for r in res["results"] if r.get("full_text")
-    )
+    full_chars = sum(len(r["full_text"]) for r in res["results"] if r.get("full_text"))
     print(f"keyword='{CODE_QUERY}' -> count={res['count']}  full_text 总字符={full_chars}")
     print(f"scores = {[r['score'] for r in res['results']]}")
     check("keyword_search 条数 <= top_k", res["count"] <= TOP_K, f"{res['count']}")
@@ -241,9 +241,14 @@ async def main() -> int:
     kw2 = system2.keyword_index.as_retriever(similarity_top_k=TOP_K).retrieve(
         QueryBundle(CODE_QUERY)
     )
-    print(f"重启后 KEYWORD_ONLY('296.3x') -> {len(kw2)} 条, scores={[round(n.score,4) for n in kw2 if n.score is not None]}")
-    check("重启后关键词索引类型是 BM25", type(system2.keyword_index).__name__ == "BM25KeywordIndex",
-          type(system2.keyword_index).__name__)
+    print(
+        f"重启后 KEYWORD_ONLY('296.3x') -> {len(kw2)} 条, scores={[round(n.score, 4) for n in kw2 if n.score is not None]}"
+    )
+    check(
+        "重启后关键词索引类型是 BM25",
+        type(system2.keyword_index).__name__ == "BM25KeywordIndex",
+        type(system2.keyword_index).__name__,
+    )
     check("重启后 KEYWORD_ONLY 仍有结果", len(kw2) > 0 and all(n.score is not None for n in kw2))
     check(
         "重启后 KEYWORD_ONLY 仍命中 MDD",
@@ -257,20 +262,34 @@ async def main() -> int:
     n_small = len(r_small.get("sources", []))
     n_large = len(r_large.get("sources", []))
     print(f"并发 top_k=1 -> {n_small} 条; top_k=5 -> {n_large} 条")
-    check("并发请求各自遵守自己的 top_k", n_small <= 1 and n_large > n_small,
-          f"{n_small} vs {n_large}")
-    check("回显生效的 similarity_top_k", r_small.get("similarity_top_k") == 1 and r_large.get("similarity_top_k") == 5)
+    check(
+        "并发请求各自遵守自己的 top_k",
+        n_small <= 1 and n_large > n_small,
+        f"{n_small} vs {n_large}",
+    )
+    check(
+        "回显生效的 similarity_top_k",
+        r_small.get("similarity_top_k") == 1 and r_large.get("similarity_top_k") == 5,
+    )
     before_mode = system.default_mode
     await system.query(QueryRequest(question=QUERY, mode="VECTOR_ONLY", similarity_top_k=2))
-    check("请求不会改动服务默认模式", system.default_mode == before_mode,
-          f"default_mode={system.default_mode}")
+    check(
+        "请求不会改动服务默认模式",
+        system.default_mode == before_mode,
+        f"default_mode={system.default_mode}",
+    )
 
     hr("[10] keyword_search 阈值与条数上限")
     res_bounded = await system.keyword_search(KeywordSearchRequest(keyword="depression", top_k=20))
-    print(f"count={res_bounded['count']} total_matched={res_bounded['total_matched']} "
-          f"filtered={res_bounded['filtered_by_cutoff']} max_sources={res_bounded['max_sources']}")
-    check("keyword_search 受 max_sources 截断", res_bounded["count"] <= config.max_sources,
-          f"{res_bounded['count']} <= {config.max_sources}")
+    print(
+        f"count={res_bounded['count']} total_matched={res_bounded['total_matched']} "
+        f"filtered={res_bounded['filtered_by_cutoff']} max_sources={res_bounded['max_sources']}"
+    )
+    check(
+        "keyword_search 受 max_sources 截断",
+        res_bounded["count"] <= config.max_sources,
+        f"{res_bounded['count']} <= {config.max_sources}",
+    )
 
     hr("[11] 真流式：answer_chunk 是否分多次下发、首 token 是否早于结束")
     stream_res = await system.query(
@@ -298,8 +317,11 @@ async def main() -> int:
         first_chunk_at is not None and first_chunk_at < stream_elapsed * 0.9,
         f"ttft={first_chunk_at:.4f}s total={stream_elapsed:.4f}s",
     )
-    check("事件顺序含 query_started/answer_chunk/query_completed",
-          events[0] == "query_started" and events[-1] == "query_completed", str(events[:2]) + "..." + str(events[-1]))
+    check(
+        "事件顺序含 query_started/answer_chunk/query_completed",
+        events[0] == "query_started" and events[-1] == "query_completed",
+        str(events[:2]) + "..." + str(events[-1]),
+    )
 
     hr("[12] 批量查询并发上限")
     batch = await system.batch_query(
@@ -308,11 +330,20 @@ async def main() -> int:
             mode="KEYWORD_ONLY",
         )
     )
-    print(f"total={batch['total']} successful={batch['successful']} concurrency={batch['concurrency']} 耗时={batch['response_time']}s")
+    print(
+        f"total={batch['total']} successful={batch['successful']} concurrency={batch['concurrency']} 耗时={batch['response_time']}s"
+    )
     check("批量查询结果条数与输入一致", batch["total"] == 4)
-    check("批量查询全部成功", batch["successful"] == 4, str([r.get("error") for r in batch["results"] if not r.get("success")]))
-    check("批量查询走 Semaphore 并发上限", batch["concurrency"] == config.batch_concurrency,
-          f"{batch['concurrency']} == {config.batch_concurrency}")
+    check(
+        "批量查询全部成功",
+        batch["successful"] == 4,
+        str([r.get("error") for r in batch["results"] if not r.get("success")]),
+    )
+    check(
+        "批量查询走 Semaphore 并发上限",
+        batch["concurrency"] == config.batch_concurrency,
+        f"{batch['concurrency']} == {config.batch_concurrency}",
+    )
 
     hr("汇总")
     for k, v in RESULTS.items():

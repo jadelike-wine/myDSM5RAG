@@ -58,9 +58,7 @@ def _make_config(corpus_dir: Path, root: Path) -> RagConfig:
 @pytest.fixture(scope="module")
 def streaming_system(corpus_dir, tmp_path_factory):
     root = tmp_path_factory.mktemp("stream")
-    instance = DeepSeekRAGSystem(
-        _make_config(corpus_dir, root), auto_build_index=False
-    )
+    instance = DeepSeekRAGSystem(_make_config(corpus_dir, root), auto_build_index=False)
     instance._init_storage()
     asyncio.run(instance.build_index(force_rebuild=True))
     return instance
@@ -82,9 +80,7 @@ class TestStreamProtocol:
     async def test_answer_arrives_in_multiple_chunks(self, streaming_system):
         streaming_system.llm = SlowStreamingLLM()
         result = await streaming_system.query(
-            QueryRequest(
-                question="Major Depressive Disorder 的诊断标准", stream=True
-            )
+            QueryRequest(question="Major Depressive Disorder 的诊断标准", stream=True)
         )
         events, first_at, total = await _collect(result["streaming_response"])
 
@@ -93,12 +89,8 @@ class TestStreamProtocol:
         assert names[1] == "retrieval_completed"
         assert names[-1] == "query_completed"
 
-        content_chunks = [
-            e for e in events if e["event"] == "answer_chunk" and e["chunk"]
-        ]
-        assert len(content_chunks) == len(TOKENS), (
-            "流式应逐 token 下发，而不是整段一次给完"
-        )
+        content_chunks = [e for e in events if e["event"] == "answer_chunk" and e["chunk"]]
+        assert len(content_chunks) == len(TOKENS), "流式应逐 token 下发，而不是整段一次给完"
         assert "".join(e["chunk"] for e in content_chunks) == "".join(TOKENS)
         assert sum(1 for e in events if e.get("is_complete")) == 1
 
@@ -146,9 +138,7 @@ class TestStreamProtocol:
         original = streaming_system.llm
         streaming_system.llm = BrokenLLM()
         try:
-            result = await streaming_system.query(
-                QueryRequest(question="296.3x", stream=True)
-            )
+            result = await streaming_system.query(QueryRequest(question="296.3x", stream=True))
             events, _first, _total = await _collect(result["streaming_response"])
         finally:
             streaming_system.llm = original
@@ -165,9 +155,9 @@ class TestContextPacking:
         from llama_index.core import QueryBundle
 
         streaming_system.config.stream_context_char_limit = 800
-        nodes = streaming_system.keyword_index.as_retriever(
-            similarity_top_k=10
-        ).retrieve(QueryBundle("diagnostic criteria"))
+        nodes = streaming_system.keyword_index.as_retriever(similarity_top_k=10).retrieve(
+            QueryBundle("diagnostic criteria")
+        )
         assert nodes
         context = streaming_system._pack_context(nodes)
         assert len(context) <= 800 + 2 * len(nodes)
@@ -175,7 +165,5 @@ class TestContextPacking:
         streaming_system.config.stream_context_char_limit = 24000
 
     async def test_empty_nodes_yield_empty_response(self, streaming_system):
-        chunks = [
-            chunk async for chunk in streaming_system._astream_answer("q", [])
-        ]
+        chunks = [chunk async for chunk in streaming_system._astream_answer("q", [])]
         assert chunks == ["Empty Response"]
