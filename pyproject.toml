@@ -111,7 +111,6 @@ known-first-party = ["dsm5_rag"]
 
 [tool.coverage.run]
 source = ["src/dsm5_rag"]
-omit = ["*/api.py"]
 
 [tool.coverage.report]
 show_missing = true
