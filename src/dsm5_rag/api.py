@@ -108,9 +108,14 @@ async def lifespan(app: FastAPI):
 
 # ==================== FastAPI应用 ====================
 
-cors_origins = (
-    os.getenv("CORS_ORIGINS", "*").split(",") if os.getenv("CORS_ORIGINS", "*") != "*" else ["*"]
-)
+# CORS 只允许一个来源：RagConfig.cors_origins（即 CORS_ORIGINS env）。
+# allow_origins=["*"] 与 allow_credentials=True 的组合会被浏览器拒绝
+# （ACAO 回 "*" 时凭据请求直接失败），所以 origins 含 "*" 时强制关闭 credentials。
+_cors_config = RagConfig()
+cors_origins = [
+    origin.strip() for origin in _cors_config.cors_origins.split(",") if origin.strip()
+] or ["*"]
+cors_allow_credentials = "*" not in cors_origins
 
 app = FastAPI(
     title="DSM-5 RAG API",
@@ -155,7 +160,7 @@ app.openapi = custom_openapi
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_credentials=True,
+    allow_credentials=cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

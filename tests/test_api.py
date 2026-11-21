@@ -136,6 +136,11 @@ class TestHealthAndStatus:
         assert "text/html" in response.headers.get("content-type", "")
 
     def test_cors_headers(self, client):
+        """默认 CORS_ORIGINS=*：preflight 回 "*"，且不能带 credentials。
+
+        allow_origins=["*"] + allow_credentials=True 会被浏览器直接拒绝，
+        api.py 因此对 "*" 强制 allow_credentials=False，这里锁死该契约。
+        """
         response = client.options(
             "/",
             headers={
@@ -144,7 +149,16 @@ class TestHealthAndStatus:
             },
         )
         assert response.status_code == 200
-        assert "access-control-allow-origin" in response.headers
+        assert response.headers["access-control-allow-origin"] == "*"
+        assert "access-control-allow-credentials" not in response.headers
+
+    def test_cors_origin_list_parsing(self, monkeypatch):
+        """CORS 来源必须走 RagConfig.cors_origins：按逗号切分、去空白、去空项。"""
+        monkeypatch.setenv("CORS_ORIGINS", " https://a.com ,https://b.com,,")
+        config = api.RagConfig()
+        origins = [o.strip() for o in config.cors_origins.split(",") if o.strip()]
+        assert origins == ["https://a.com", "https://b.com"]
+        assert "*" not in origins  # 非通配符列表才允许 allow_credentials=True
 
 
 class TestQueryEndpoint:
