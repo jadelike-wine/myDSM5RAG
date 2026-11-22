@@ -3,13 +3,17 @@
 import os
 from pathlib import Path
 
-current_dir = Path(__file__).parent.parent.parent
-
 
 class RagConfig:
     """RAG系统配置模型 - DSM-5知识库版本"""
 
     def __init__(self):
+        # =============== 路径基准配置 ===============
+        # 相对路径（DOCUMENTS_PATH / PERSIST_DIR / MODELS_DIR）的解析基准。
+        # 默认 cwd：不能再按 __file__ 相对层级推导——非 editable 安装时包落在
+        # site-packages 里，会解析到 site-packages/<rel> 并被 mkdir 出来。
+        self.base_dir = Path(os.getenv("DSM5_RAG_BASE_DIR", ".")).resolve()
+
         # =============== API服务器配置 ===============
         self.api_host = os.getenv("API_HOST", "localhost")
         self.api_port = int(os.getenv("API_PORT", "8000"))

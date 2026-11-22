@@ -38,7 +38,7 @@ from llama_index.llms.deepseek import DeepSeek
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
 from dsm5_rag.background import executor, run_in_executor
-from dsm5_rag.config import RagConfig, current_dir
+from dsm5_rag.config import RagConfig
 from dsm5_rag.index_manifest import IndexManifest, describe_files, status_of
 from dsm5_rag.keyword_index import BM25KeywordIndex
 from dsm5_rag.models import (
@@ -113,9 +113,10 @@ class DeepSeekRAGSystem:
         logger.info("DeepSeekRAGSystem初始化完成 - DSM-5知识库版本")
 
     def _resolve_path(self, path_str: str) -> Path:
+        """相对路径按 config.base_dir 解析（默认 cwd，可用 DSM5_RAG_BASE_DIR 覆盖）。"""
         path = Path(path_str)
         if not path.is_absolute():
-            return current_dir / path
+            return self.config.base_dir / path
         return path
 
     def _create_directories(self):

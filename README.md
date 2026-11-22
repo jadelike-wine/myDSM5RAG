@@ -140,6 +140,7 @@ All configuration is set via environment variables (see `.env`):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `DSM5_RAG_BASE_DIR` | `.` (cwd) | Base directory for resolving relative `PERSIST_DIR` / `DOCUMENTS_PATH` / `MODELS_DIR`. Set this explicitly when installing non-editable (`pip install .`, container images), where relative paths would otherwise resolve against the process cwd |
 | `PERSIST_DIR` | `./chroma_dsm5_db` | ChromaDB persistence directory |
 | `DOCUMENTS_PATH` | `./dsm5_documents` | Document path (directory or single file) |
 

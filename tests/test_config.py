@@ -1,11 +1,14 @@
 """RagConfig 单元测试"""
 
+from pathlib import Path
+
 import pytest
 
 from dsm5_rag.config import RagConfig
 
 # 测试默认值需忽略的环境变量（conftest 的 autouse fixture 会加载 .env 并做隔离）
 _IGNORED_ENV_VARS = [
+    "DSM5_RAG_BASE_DIR",
     "API_HOST",
     "API_PORT",
     "API_RELOAD",
@@ -111,3 +114,48 @@ class TestRagConfig:
         """测试日志级别默认值"""
         config = RagConfig()
         assert config.log_level == "INFO"
+
+
+class TestBaseDir:
+    """相对路径解析基准：必须显式可配置，且默认与安装方式无关。
+
+    历史实现用 `Path(__file__).parent.parent.parent`，editable 安装时是仓库根，
+    但 `pip install .` / 镜像打包后落到 site-packages，相对路径会解析错并被 mkdir。
+    """
+
+    def test_base_dir_defaults_to_cwd(self):
+        config = RagConfig()
+        assert config.base_dir == Path.cwd()
+        assert "site-packages" not in str(config.base_dir)
+
+    def test_base_dir_env_override(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("DSM5_RAG_BASE_DIR", str(tmp_path))
+        config = RagConfig()
+        assert config.base_dir == tmp_path.resolve()
+
+    def test_base_dir_relative_env_resolves_against_cwd(self, monkeypatch, tmp_path):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("DSM5_RAG_BASE_DIR", "some/relative/dir")
+        config = RagConfig()
+        assert config.base_dir == (tmp_path / "some/relative/dir").resolve()
+
+    def test_resolve_path_uses_base_dir(self, monkeypatch, tmp_path):
+        """相对路径必须落到 base_dir 下，而不是包安装目录下。"""
+        from dsm5_rag.system import DeepSeekRAGSystem
+
+        monkeypatch.setenv("DSM5_RAG_BASE_DIR", str(tmp_path))
+        config = RagConfig()
+        system = DeepSeekRAGSystem.__new__(DeepSeekRAGSystem)
+        system.config = config
+        resolved = system._resolve_path("./dsm5_documents")
+        assert resolved == tmp_path.resolve() / "dsm5_documents"
+        assert "site-packages" not in str(resolved)
+
+    def test_resolve_path_keeps_absolute(self, tmp_path):
+        from dsm5_rag.system import DeepSeekRAGSystem
+
+        config = RagConfig()
+        system = DeepSeekRAGSystem.__new__(DeepSeekRAGSystem)
+        system.config = config
+        absolute = tmp_path / "docs"
+        assert system._resolve_path(str(absolute)) == absolute

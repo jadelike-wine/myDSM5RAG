@@ -140,6 +140,7 @@ uv run python examples/api_client.py
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
+| `DSM5_RAG_BASE_DIR` | `.`（当前工作目录） | 相对路径（`PERSIST_DIR` / `DOCUMENTS_PATH` / `MODELS_DIR`）的解析基准。非 editable 安装（`pip install .`、容器镜像）时务必显式设置，否则相对路径会按进程 cwd 解析 |
 | `PERSIST_DIR` | `./chroma_dsm5_db` | ChromaDB 持久化目录 |
 | `DOCUMENTS_PATH` | `./dsm5_documents` | 文档文件路径（支持目录或单文件） |
 
