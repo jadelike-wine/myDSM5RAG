@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "description": "检索 gold set 第一步：问题 -> 期望命中的语料文件。用于 scripts/eval_gold_set.py 计算 hit-rate@k 与 MRR。",
+  "questions": [
+    {
+      "id": "mdd_criteria",
+      "question": "What are the diagnostic criteria for Major Depressive Disorder?",
+      "expected_files": ["mdd_major_dep.txt"]
+    },
+    {
+      "id": "adhd_criteria",
+      "question": "What are the diagnostic criteria for Attention-Deficit Hyperactivity Disorder?",
+      "expected_files": ["adhd.txt"]
+    },
+    {
+      "id": "bipolar_mania",
+      "question": "What are the diagnostic criteria for Bipolar I Disorder manic episode?",
+      "expected_files": ["bipolar_i.txt"]
+    },
+    {
+      "id": "gad_worry",
+      "question": "What are the diagnostic criteria for Generalized Anxiety Disorder excessive worry?",
+      "expected_files": ["generalized_anxiety.txt"]
+    },
+    {
+      "id": "persistent_depressive",
+      "question": "What is Persistent Depressive Disorder dysthymia diagnostic criteria?",
+      "expected_files": ["persistent_depressive.txt"]
+    },
+    {
+      "id": "icd_code_mdd",
+      "question": "296.3x",
+      "expected_files": ["mdd_major_dep.txt"]
+    },
+    {
+      "id": "anhedonia",
+      "question": "anhedonia 快感缺失",
+      "expected_files": ["mdd_major_dep.txt"]
+    }
+  ]
+}
