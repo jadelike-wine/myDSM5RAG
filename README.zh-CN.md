@@ -116,7 +116,7 @@ uv run python examples/api_client.py
 | `API_HOST` | `localhost` | 服务监听地址 |
 | `API_PORT` | `8000` | 服务端口 |
 | `API_RELOAD` | `false` | 是否启用热重载 |
-| `CORS_ORIGINS` | `*` | 跨域允许的源 |
+| `CORS_ORIGINS` | `*` | 跨域允许的源（逗号分隔）。含 `*` 时强制关闭 `allow_credentials`，因为浏览器会拒绝 `*` + 凭据的组合 |
 | `LOG_LEVEL` | `INFO` | 日志级别 |
 
 ### DeepSeek LLM
@@ -193,14 +193,17 @@ myDSM5RAG/
 │   ├── retriever.py             # HybridRetriever（基于 core QueryFusionRetriever 的 RRF / 加权融合）
 │   └── system.py                # RAG 系统核心（DeepSeekRAGSystem）
 ├── scripts/
+│   ├── eval_gold_set.py         # gold set 检索评测（hit-rate@k / MRR）
 │   └── repro_keyword_channel.py # 关键词通道诊断脚本（改动前后对比用）
 ├── tests/                       # 测试套件
 │   ├── conftest.py              # fixtures：临时目录隔离 + 测试用嵌入替身（不下载权重）
 │   ├── fake_system.py           # 端点契约测试用的假 RAG 系统
 │   ├── lexical_embedding.py     # 确定性词袋哈希向量（测试专用）
 │   ├── fixtures/corpus/         # 5 个真实 DSM-5 片段 txt
+│   ├── fixtures/gold_set.json   # gold 查询 -> 期望命中的语料文件
 │   ├── test_api.py              # 端点契约测试（含 NDJSON 流式行格式）
 │   ├── test_config.py           # 配置测试
+│   ├── test_gold_set_eval.py    # hit-rate@k / MRR 聚合与 gold set schema
 │   ├── test_index_manifest.py   # 索引清单/变更检测测试
 │   ├── test_keyword_index.py    # 真实语料的 BM25 召回测试
 │   ├── test_mcp_server.py       # MCP 注册测试 + 真实工具调用测试
@@ -216,7 +219,7 @@ myDSM5RAG/
 ├── dsm5_documents/              # 文档目录（已 gitignore）
 ├── chroma_dsm5_db/              # ChromaDB 数据 + index_manifest.json（已 gitignore）
 ├── models/                      # 本地模型缓存（已 gitignore）
-├── .github/workflows/ci.yml     # CI：uv sync → ruff check → pytest --cov
+├── .github/workflows/ci.yml     # CI：ruff check → ruff format --check → pytest --cov
 ├── .env                         # 环境变量配置（已 gitignore）
 ├── .example.env                 # 环境变量模板
 ├── pyproject.toml               # 项目配置、依赖、ruff/pytest 设置
@@ -334,17 +337,20 @@ uv run pytest tests/test_mcp_server.py -v
 # 覆盖率（pytest-cov 已在 dev 依赖里）
 uv run pytest --cov=dsm5_rag --cov-report=term-missing
 
-# 静态检查 / 格式
+# 静态检查 / 格式（全仓库，与 CI 同范围）
 uv run ruff check src tests scripts
-uv run ruff format --check src/dsm5_rag
+uv run ruff format --check .
 
 # 关键词通道诊断：打印分数、融合贡献、耗时分段
 uv run python scripts/repro_keyword_channel.py
+
+# gold set 检索评测：按模式输出 hit-rate@k / MRR，只测排序（无 rerank、不调 LLM）
+uv run python scripts/eval_gold_set.py
 ```
 
 覆盖范围：真实 `tests/fixtures/corpus` 片段的 BM25 召回、融合语义（名次融合的尺度无关性、`vector_weight`、`top_k`）、含 NDJSON 流式行格式的端点契约、真流式与事件循环响应性、索引变更检测、关键词索引的持久化与旧格式迁移。
 
-CI（`.github/workflows/ci.yml`）执行 `uv sync --frozen` → `ruff check` → `pytest --cov`。
+CI（`.github/workflows/ci.yml`）执行 `uv sync --frozen` → `ruff check` → `ruff format --check .` → `pytest --cov`。
 
 ## 技术栈
 

@@ -116,7 +116,7 @@ All configuration is set via environment variables (see `.env`):
 | `API_HOST` | `localhost` | Server listen address |
 | `API_PORT` | `8000` | Server port |
 | `API_RELOAD` | `false` | Enable hot reload |
-| `CORS_ORIGINS` | `*` | Allowed CORS origins |
+| `CORS_ORIGINS` | `*` | Allowed CORS origins (comma-separated). When `*` is present, `allow_credentials` is forced off because browsers reject `*` + credentials |
 | `LOG_LEVEL` | `INFO` | Log level |
 
 ### DeepSeek LLM
@@ -193,14 +193,17 @@ myDSM5RAG/
 │   ├── retriever.py             # HybridRetriever (RRF / weighted fusion on top of core's QueryFusionRetriever)
 │   └── system.py                # RAG system core (DeepSeekRAGSystem)
 ├── scripts/
+│   ├── eval_gold_set.py         # Gold-set retrieval eval (hit-rate@k / MRR)
 │   └── repro_keyword_channel.py # Keyword-channel diagnostic (runs before/after changes)
 ├── tests/                       # Test suite
 │   ├── conftest.py              # Fixtures: temp-dir isolation + fake embedding (no model download)
 │   ├── fake_system.py           # Fake RAG system for API contract tests
 │   ├── lexical_embedding.py     # Deterministic hashing embedding used by tests
 │   ├── fixtures/corpus/         # 5 real DSM-5 excerpt .txt files
+│   ├── fixtures/gold_set.json   # Gold queries -> expected corpus files
 │   ├── test_api.py              # Endpoint contracts incl. NDJSON stream format
 │   ├── test_config.py           # Configuration tests
+│   ├── test_gold_set_eval.py    # hit-rate@k / MRR aggregation + gold-set schema
 │   ├── test_index_manifest.py   # Manifest / change-detection tests
 │   ├── test_keyword_index.py    # BM25 recall tests on the real corpus
 │   ├── test_mcp_server.py       # MCP registration + tool behaviour tests
@@ -216,7 +219,7 @@ myDSM5RAG/
 ├── dsm5_documents/              # Documents directory (gitignored)
 ├── chroma_dsm5_db/              # ChromaDB data + index_manifest.json (gitignored)
 ├── models/                      # Local model cache (gitignored)
-├── .github/workflows/ci.yml     # CI: uv sync -> ruff check -> pytest --cov
+├── .github/workflows/ci.yml     # CI: ruff check -> ruff format --check -> pytest --cov
 ├── .env                         # Environment variables (gitignored)
 ├── .example.env                 # Environment template
 ├── pyproject.toml               # Project config, dependencies, ruff/pytest settings
@@ -336,12 +339,15 @@ uv run pytest tests/test_mcp_server.py -v
 # Coverage (pytest-cov is part of the dev group)
 uv run pytest --cov=dsm5_rag --cov-report=term-missing
 
-# Lint / format
+# Lint / format (repo-wide, same scope as CI)
 uv run ruff check src tests scripts
-uv run ruff format --check src/dsm5_rag
+uv run ruff format --check .
 
 # Keyword-channel diagnostic: prints scores, fusion contributions, timings
 uv run python scripts/repro_keyword_channel.py
+
+# Gold-set retrieval eval: hit-rate@k / MRR per mode, ranking only (no rerank, no LLM)
+uv run python scripts/eval_gold_set.py
 ```
 
 The suite covers: BM25 recall on the real `tests/fixtures/corpus` excerpts, fusion semantics
@@ -349,7 +355,8 @@ The suite covers: BM25 recall on the real `tests/fixtures/corpus` excerpts, fusi
 stream shape, real token streaming with an event-loop responsiveness check, index change
 detection, and persistence/migration of the keyword index.
 
-CI (`.github/workflows/ci.yml`) runs `uv sync --frozen` → `ruff check` → `pytest --cov`.
+CI (`.github/workflows/ci.yml`) runs `uv sync --frozen` → `ruff check` → `ruff format --check .`
+→ `pytest --cov`.
 
 ## Tech Stack
 
